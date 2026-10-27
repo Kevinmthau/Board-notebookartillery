@@ -1,5 +1,13 @@
 # Edit history
 
+## October 27, 2026 — Fire layout accepted; commit and push
+
+User confirmed: “That works. Commit and push the change.” Recorded acceptance of the Fire-button placement and prepared the validated implementation, integration inputs, project records, and screenshots for publication to the existing repository.
+
+## October 27, 2026 — Fire below the active Cannon
+
+User requested: “move the fire button under the cannon that is shooting.” Fire is now centered below the active tower and switches sides when the turn changes. Angle and power controls occupy the center of the footer, keeping Fire clear on either side. Drawing and touch handling share their control bounds; targets remain at least 120 px and the footer, including button shadows, stays 48 px inside the glass. Updated existing native integration inputs for the relocated controls. No new assets.
+
 ## October 27, 2026 — Alignment accepted; commit and push
 
 User confirmed the installed fix works: “That works now. commit and push the fix.” Recorded human acceptance of physical spout alignment and prepared the source, regression tests, project records, and Board screenshots for publication to the existing repository.

@@ -29,5 +29,9 @@
 - [x] Correct the origin-only fix: native guide and shot leave straight along the sensed barrel, with an accurate angle readout and no relative calibration or native angle clamp.
 - [x] Test every native guide sample and launch velocity, including angles outside 15–80°, then package and install the barrel-direction correction on Board.
 - [x] User confirms the guide comes straight out of the real Cannon spout on Board.
+- [x] Move Fire below the active tower, center angle/power controls, and verify firing on both sides in the browser and native integration harness.
+- [x] Build, package, install, and launch the active-side Fire layout on the paired Board.
+- [x] User confirms the relocated Fire button works.
+- [ ] Confirm the relocated Fire button's reach with real Cannons on Board.
 - [ ] Visually verify spout alignment after pause recovery on Board with real Cannons.
 - [ ] Complete a full hardware match and collect feedback on aiming feel, reach, and pacing.

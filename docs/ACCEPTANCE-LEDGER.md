@@ -1,5 +1,18 @@
 # Acceptance ledger: Bloog Barrage
 
+## October 27, 2026 — Fire layout accepted; commit and push
+
+- **Human evidence:** The user confirmed “That works” and requested committing and pushing the change. The Fire-button placement is accepted; this does not establish a complete hardware match or a separate reach assessment.
+- **Handover:** Publish the active-side Fire layout, updated integration inputs, project records, and screenshots to the existing repository. The validated implementation has 112 passing tests and 3 inherited catalog skips, successful native/browser builds, browser firing checks on both sides, and a successful Board installation. Only acceptance records changed after validation.
+
+## October 27, 2026 — Fire below the active Cannon
+
+- **Request/change:** Move Fire beneath the shooting Cannon. Its center now aligns with the active tower at x240 or x1680, switching with the turn. Angle and power stay in the middle. Drawn controls and touch targets share bounds, remain at least 120 px, and keep the footer and shadows 48 px inside the glass. The button does not follow piece movement.
+- **Automated evidence:** `npm test`: 112 passed, 0 failed, 3 inherited catalog skips. Updated the existing native integration's touch positions; both sides, power drag, missing Cannon, solo play, and held-finger pause recovery pass. `npm run build:web` passes TypeScript, Vite, native packaging, and browser packaging. ZIP integrity and diff whitespace checks pass.
+- **Browser evidence:** Started a two-player match; checked Fire below the left tower, adjusted angle with both buttons, dragged power from 70% to 80%, and fired. Fire moved beneath the right tower at the next turn; tapping the vacated left position did nothing, while tapping right Fire launched the shot. Screenshots: `docs/screenshots/fire-left-browser.png` and `docs/screenshots/fire-right-browser.png`.
+- **Board evidence:** Build `dcb9639549a2c5cd` installed and launched on the paired Board, preserving appId/packageId. `docs/screenshots/board-fire-layout.png` shows the title loaded. Startup logs show platform state ready and only the existing optional font-metadata/favicon warnings, with no new application exception.
+- **Human evidence:** The relocated control's reach with real Cannons has not yet been checked on hardware.
+
 ## October 27, 2026 — Barrel alignment accepted and committed
 
 - **Human evidence:** After trying build `ddb169a45a95c862` on Board, the user confirmed: “That works now,” and requested committing and pushing the fix. Real-piece spout/guide alignment is accepted. This does not establish a separate pause-recovery playtest or a complete hardware match.

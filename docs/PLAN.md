@@ -48,7 +48,7 @@
 ## Players and seating
 
 - Two players own the left and right towers. Every screen and label faces the landscape on Board and in the browser, as requested by the user after trying the Board build.
-- One shared horizontal power slider and Fire button control the active player's shot. Player names, health, wind, setup, help, and results use the same upright orientation.
+- One shared horizontal power slider and Fire button control the active player's shot. Fire sits below the active Cannon's tower and switches sides with the turn; angle and power stay centered between the towers. The button stays fixed to the tower rather than following small physical-piece movements. Player names, health, wind, setup, help, and results use the same upright orientation.
 - The in-game question-mark button is removed. How to Play remains on the title screen and in the platform menu.
 - Board's selector in `src/seats.ts` supplies every player and AI. Identity follows `sessionId`.
 - A Cannon placed at an unclaimed tower binds the next unbound human in the roster.
@@ -122,6 +122,7 @@
 | Start flow | Explicit Start Game after roster and cannon readiness | builder | User requested reliable starting | Add the second player rather than replacing a lone right-side player |
 | Battlefield difficulty | Zoomed-out view, smaller targets, more hills and trees | person | Browser feedback, October 27 | Targets were too easy to hit; obstacles affect collisions |
 | In-play help button | Removed | person | Browser annotation, October 27 | Help stays in title and system menu |
+| Fire button position | Below the shooting Cannon's tower | person | Requested move, October 27 | Switches with the active turn; centered angle/power controls keep both sides clear |
 | Obstacle durability | Destructible hills and trees | person | Preference answer, October 27 | Persistent craters, felled trees, and AI reacting to changed terrain |
 | Replay variation | Different hills and trees every game | person | Follow-up request, October 27 | Seeded per-match geometry; fixed physical cannon platforms |
 | Moving obstacles | Occasional passing birds | person | Follow-up request, October 27 | Both players and Pip can be blocked; bird flies away |

@@ -118,7 +118,7 @@ function tap(x: number, y: number, id = 99) {
 }
 function fire(side: Side, id = 100) {
   assert.equal(saved!.match.turn, side);
-  tap(1650, 960, id);
+  tap(TUNE.towerX[side], 960, id);
 }
 // The catalog's mouth edge runs from (-4.51, 26.58) to (4.79, 26.49) mm.
 // Interpolate its intersection with the barrel centerline independently of frontPoint().
@@ -150,7 +150,7 @@ function assertPreviewAtMuzzle(side: Side, pose: BoardContact) {
 function fireFromMuzzle(side: Side, pose: BoardContact, id = 100) {
   assert.equal(saved!.match.turn, side);
   assertPreviewAtMuzzle(side, pose);
-  emit(finger(id, 1650, 960, BoardContactPhase.Began));
+  emit(finger(id, TUNE.towerX[side], 960, BoardContactPhase.Began));
   assert.equal(saved!.match.phase, 'flight');
   assert.ok(saved!.match.projectile);
   assert.equal(saved!.match.projectile.age, 0, 'inspect the shot before its first physics step');
@@ -160,7 +160,7 @@ function fireFromMuzzle(side: Side, pose: BoardContact, id = 100) {
     'fired ball did not leave straight along the physical barrel (x velocity)');
   assert.ok(Math.abs(saved!.match.projectile.vy - Math.sin(radians) * speed) < 1e-6,
     'fired ball did not leave straight along the physical barrel (y velocity)');
-  emit(finger(id, 1650, 960, BoardContactPhase.Ended));
+  emit(finger(id, TUNE.towerX[side], 960, BoardContactPhase.Ended));
   run(.05);
 }
 async function answerSelection(player?: BoardPlayer) {
@@ -216,8 +216,8 @@ test('native landscape setup starts two-player and solo matches, with deliberate
   assert.equal(saved.match.angle[0], 5, 'the displayed elevation must match the physical barrel even below 15 degrees');
   assert.equal(totalShots(), 0, 'rotation fired accidentally');
   emit(finger(90, 1030, 986, BoardContactPhase.Began));
-  emit(finger(90, 1140, 986, BoardContactPhase.Moved));
-  emit(finger(90, 1140, 986, BoardContactPhase.Ended)); run(.05);
+  emit(finger(90, 1278, 986, BoardContactPhase.Moved));
+  emit(finger(90, 1278, 986, BoardContactPhase.Ended)); run(.05);
   assert.ok(saved.match.power[0] >= 70 && saved.match.power[0] <= 80, 'native power drag did not update strength');
   assert.equal(totalShots(), 0, 'setting power fired accidentally');
   fireFromMuzzle(0, leftPose); assert.equal(saved.match.shots[0], 1); run(8);
@@ -240,8 +240,8 @@ test('native landscape setup starts two-player and solo matches, with deliberate
   // Native menu pause clears contacts. Re-detection gets new ids and must not commit a shot.
   const beforePause = totalShots(), health = [...saved.match.health], terrain = structuredClone(saved.match.terrain);
   // The finger begins off Fire, then moves onto it without a new press. It is held when the menu opens.
-  emit(finger(299, 1650, 800, BoardContactPhase.Began));
-  emit(finger(299, 1650, 960, BoardContactPhase.Moved)); run(.1);
+  emit(finger(299, TUNE.towerX[0], 800, BoardContactPhase.Began));
+  emit(finger(299, TUNE.towerX[0], 960, BoardContactPhase.Moved)); run(.1);
   assert.equal(totalShots(), beforePause);
   for (const callback of pauses) callback();
   const pausedClock=saved.match.elapsed, pausedBirds=structuredClone(saved.match.birds);
@@ -254,9 +254,9 @@ test('native landscape setup starts two-player and solo matches, with deliberate
   const resumedRight = { ...rightPose, contactId: 1, orientation: 225 - 180, phase: BoardContactPhase.Began };
   emit(resumedLeft, resumedRight); run(.15);
   assertPreviewAtMuzzle(0, resumedLeft);
-  emit(finger(300, 1650, 960, BoardContactPhase.Began)); run(.1);
+  emit(finger(300, TUNE.towerX[0], 960, BoardContactPhase.Began)); run(.1);
   assert.equal(totalShots(), beforePause, 'post-menu finger re-detection fired before a new deliberate press');
-  emit(finger(300, 1650, 960, BoardContactPhase.Ended)); run(.6);
+  emit(finger(300, TUNE.towerX[0], 960, BoardContactPhase.Ended)); run(.6);
   assert.deepEqual(saved.match.health, health);
   assert.deepEqual(saved.match.terrain, terrain, 'pause healed the battlefield');
   // A brief glyph-zero flap retains the identified Cannon's real pose and spout.

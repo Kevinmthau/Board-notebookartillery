@@ -134,8 +134,10 @@ function shoot() {
   if (!currentHuman() || !hasCannon(match.turn)) return;
   if (beginShot(match,undefined,undefined,shotPose())) { sound('fire');gestures.clear();persist(); }
 }
-function powerBox():Box {return {x:700,y:886,w:660,h:146};}
-function fireBox():Box {return {x:1450,y:888,w:400,h:144};}
+function powerBox():Box {return {x:960,y:886,w:480,h:146};}
+function angleBox(increase:boolean):Box {return {x:increase?800:480,y:898,w:120,h:126};}
+// Stay below the active tower, independent of small physical-piece movements.
+function fireBox():Box {return {x:TUNE.towerX[match.turn]-180,y:888,w:360,h:136};}
 function setPower(x:number) { const b=powerBox();match.power[match.turn]=Math.round(clamp(20+(x-b.x-32)/(b.w-64)*80,20,100));updateLabel(); }
 function setAim(p:{x:number;y:number}) {
   const side=match.turn, dx=(p.x-TUNE.towerX[side])*(side===0?1:-1),dy=TUNE.cannonY-p.y;
@@ -157,8 +159,8 @@ function press(p:{x:number;y:number},id:number) {
   if (inside(q,fireBox())) {shoot();return;}
   if (inside(q,powerBox())) {setPower(q.x);gestures.set(id,{kind:'power',side:match.turn});return;}
   if (browser) {
-    if(inside(q,{x:64,y:898,w:120,h:134})) {match.angle[match.turn]=clamp(match.angle[match.turn]-5,15,80);updateLabel();return;}
-    if(inside(q,{x:500,y:898,w:120,h:134})) {match.angle[match.turn]=clamp(match.angle[match.turn]+5,15,80);updateLabel();return;}
+    if(inside(q,angleBox(false))) {match.angle[match.turn]=clamp(match.angle[match.turn]-5,15,80);updateLabel();return;}
+    if(inside(q,angleBox(true))) {match.angle[match.turn]=clamp(match.angle[match.turn]+5,15,80);updateLabel();return;}
     if(p.y<865) {setAim(p);gestures.set(id,{kind:'angle',side:match.turn});}
   }
 }
@@ -270,11 +272,11 @@ function playerCard(side:Side){
 function controls(side:Side){
   const enabled=match.phase==='aim'&&match.turn===side&&!isAI(side),readyToFire=enabled&&hasCannon(side);
   ctx.save();
-  round({x:48,y:874,w:1824,h:166},32,'#fffbeaef');
-  label(browser?'ANGLE':'TURN TO AIM',342,917);text(`${Math.round(match.angle[side])}°`,342,978,64,colors[side]);
+  round({x:48,y:874,w:1824,h:158},32,'#fffbeaef');
+  label(browser?'ANGLE':'TURN TO AIM',700,917);text(`${Math.round(match.angle[side])}°`,700,978,64,colors[side]);
   if(browser){
-    button({x:64,y:898,w:120,h:134},'−',cream,enabled);
-    button({x:500,y:898,w:120,h:134},'+',cream,enabled);
+    button(angleBox(false),'−',cream,enabled);
+    button(angleBox(true),'+',cream,enabled);
   }
   const b=powerBox(),fire=fireBox();
   label('POWER',b.x+b.w/2,b.y+30);
