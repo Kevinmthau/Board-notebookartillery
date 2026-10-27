@@ -17,4 +17,7 @@
 - [x] Orient setup, help, controls, player information, and results with the landscape; match native touch positions to drawn controls.
 - [x] Exercise explicit Start, canceled/retried player selection, a lone right-side human, two-player play, and solo play through the native integration harness.
 - [x] User confirmed startup with real cannons on KT's Board; hardware screenshot shows an active match, landscape controls, and tower damage.
+- [x] Remove the in-play help button and widen the battlefield with smaller targets, three ridges, and ten colliding trees.
+- [x] Add persistent craters and felled trees, shared damaged geometry for rendering/physics/AI, and clean terrain on rematch.
+- [x] Verify terrain destruction in the browser and preserve it through native pause/Continue tests.
 - [ ] Complete a full hardware match and collect feedback on aiming feel, reach, and pacing.

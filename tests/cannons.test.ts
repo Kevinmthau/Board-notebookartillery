@@ -63,7 +63,7 @@ test('lift removes presence immediately; nearby timely return keeps identity, an
   const identity = tracker.identities[0], angle = identity.angle, zero = identity.zeroFacingDeg;
   tracker.update(new Map(), 1000, footprints);
   assert.equal(identity.present, false); assert.equal(identity.legal, false); assert.equal(identity.contactId, null);
-  const arrivals = tracker.update(map(contact(8, 0, 330, { x: 380, phase: BoardContactPhase.Began })), 1200, footprints);
+  const arrivals = tracker.update(map(contact(8, 0, 330, { x: CANNON_DOCKS[0].x+50, phase: BoardContactPhase.Began })), 1200, footprints);
   assert.equal(arrivals.length, 0); assert.equal(identity.contactId, 8); assert.equal(identity.present, true);
   assert.equal(identity.angle, angle); assert.equal(identity.zeroFacingDeg, zero); assert.equal(tracker.identities.length, 1);
 });
@@ -101,7 +101,7 @@ test('three pause epochs preserve cannon state despite swapped contact ids and l
 test('unclaimed nearby duplicates cannot steal an already live binding', () => {
   const tracker = new CannonTracker(); tracker.update(map(contact(1)), 0, footprints);
   const first = tracker.identities[0];
-  assert.equal(tracker.update(map(contact(2, 0, 0, { x: 360 }), contact(1)), 100, footprints).length, 1);
+  assert.equal(tracker.update(map(contact(2, 0, 0, { x: CANNON_DOCKS[0].x+30 }), contact(1)), 100, footprints).length, 1);
   assert.equal(first.contactId, 1); assert.equal(tracker.identities[1].contactId, 2);
 });
 

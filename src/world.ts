@@ -1,7 +1,7 @@
-import { groundY, TUNE, type Match, type Side } from './artillery';
+import { groundY, TREES, TUNE, type Match, type Side } from './artillery';
 
-// Authored vector scenery, baked once. The only live scenery is clouds, flags,
-// and short damage motion. Cannon graphics deliberately do not exist here.
+// Sky and distant scenery are baked once; the terrain layer is rebaked only after
+// a blast changes it. Cannon graphics deliberately do not exist here.
 type Ctx = CanvasRenderingContext2D;
 type Surface = HTMLCanvasElement;
 const W = 1920, H = 1080;
@@ -65,61 +65,120 @@ function flower(c: Ctx, x: number, y: number, s: number, tint: string) {
   }
   circle(c, x, y, s * .65, '#F7CA64');
 }
-function terrainPath(c: Ctx, dy = 0) {
+function terrainPath(c: Ctx, terrain: Match['terrain'], dy = 0) {
   c.beginPath(); c.moveTo(0, H + 5);
-  for (let x = 0; x <= W; x += 4) c.lineTo(x, groundY(x) + dy);
+  for (let x = 0; x <= W; x += 4) c.lineTo(x, groundY(x, terrain) + dy);
   c.lineTo(W, H + 5); c.closePath();
+}
+function obstacleTree(c: Ctx, tree: (typeof TREES)[number], index: number) {
+  // Every visible trunk and crown uses the same geometry that stops a shot.
+  const top = Math.min(...tree.crown.map(p => p.y));
+  ellipse(c, tree.x + 4, tree.baseY + 3, 32, 7, '#3F86552B');
+  c.fillStyle = '#7B8260';
+  c.fillRect(tree.x - tree.trunkWidth / 2, top, tree.trunkWidth, tree.baseY - top);
+  c.fillStyle = '#A0A174';
+  c.fillRect(tree.x - tree.trunkWidth / 2 + 2, top, tree.trunkWidth * .25, tree.baseY - top);
+  const shades = ['#348D72', '#278F7B', '#3B9368'];
+  const lights = ['#8BC66E', '#73C58A', '#A3CE75'];
+  for (const crown of tree.crown) {
+    ellipse(c, crown.x, crown.y, crown.rx, crown.ry, shades[index % shades.length]);
+    ellipse(c, crown.x - crown.rx * .09, crown.y - crown.ry * .16,
+      crown.rx * .85, crown.ry * .78, lights[index % lights.length]);
+    ellipse(c, crown.x - crown.rx * .28, crown.y - crown.ry * .55,
+      crown.rx * .19, crown.ry * .09, '#D5E69A', -.3);
+    circle(c, crown.x + crown.rx * .35, crown.y + crown.ry * .18, 3, '#F7DE91');
+  }
 }
 function makeBackdrop(): Surface {
   return surface(W, H, c => {
     const sky = c.createLinearGradient(0, 0, 0, 900);
     sky.addColorStop(0, '#A6E1E8'); sky.addColorStop(.55, '#D2F0E5'); sky.addColorStop(1, '#F4F4CF');
     c.fillStyle = sky; c.fillRect(0, 0, W, H);
-    // Broad sun, a quiet part of the scenery rather than a target.
-    circle(c, 1602, 248, 103, '#FFF3B6'); circle(c, 1602, 248, 80, '#FFED9B');
-    ellipse(c, 1585, 228, 49, 40, '#FFF3B5');
-    // Soft distant ridges preserve an uncluttered flight area.
-    hill(c, [0, 660, 135, 535, 215, 574, 345, 633, 490, 696, 520, 500, 685, 542,
-      875, 587, 920, 520, 1060, 567, 1210, 615, 1300, 533, 1440, 575, 1590, 620, 1715, 520, 1920, 620], '#AAD7C3');
-    hill(c, [0, 730, 170, 610, 284, 680, 450, 746, 600, 804, 695, 670, 840, 678,
-      1080, 692, 1170, 641, 1355, 695, 1560, 755, 1665, 624, 1920, 700], '#88C9AE');
-    // Distant scenery lives below the active sky. Small pale crowns read as depth.
-    for (const [x, y, s] of [[55, 710, .46], [101, 701, .35], [493, 753, .45], [557, 741, .35],
-      [1285, 721, .44], [1336, 724, .31], [1800, 714, .48], [1866, 701, .4]]) littleTree(c, x, y, s, 1);
-    hill(c, [0, 811, 175, 755, 279, 769, 495, 813, 681, 856, 745, 763, 936, 793,
-      1120, 824, 1319, 724, 1490, 770, 1670, 820, 1800, 755, 1920, 778], '#6AB99B');
-    // Small stone arch in the distance. It is scenery, well below the flight path.
-    c.save(); c.translate(1123, 762);
-    c.fillStyle = '#9DCCA7'; c.beginPath(); c.moveTo(-38, 0); c.lineTo(-38, -29); c.quadraticCurveTo(0, -74, 38, -29); c.lineTo(38, 0); c.fill();
-    c.fillStyle = '#6EB799'; c.beginPath(); c.moveTo(-15, 0); c.lineTo(-15, -21); c.quadraticCurveTo(0, -47, 15, -21); c.lineTo(15, 0); c.fill();
+    // Smaller landmarks and many ridgelines give the duel a much wider scale.
+    circle(c, 1610, 272, 59, '#FFF3B6'); circle(c, 1610, 272, 45, '#FFED9B');
+    ellipse(c, 1599, 260, 28, 23, '#FFF3B5');
+    hill(c, [0, 585, 140, 492, 210, 550, 345, 577, 490, 605, 530, 420, 685, 460,
+      815, 495, 884, 395, 1035, 464, 1180, 535, 1260, 410, 1415, 473, 1550, 532, 1730, 440, 1920, 538], '#B5DCC9');
+    // Distant woodland is deliberately pale and small; solid foreground trees are darker.
+    for (let i = 0; i < 43; i++) {
+      const x = i * 47 + 9, y = 590 + Math.sin(i * .79) * 37;
+      if (TUNE.towerX.some(towerX => Math.abs(towerX - x) < 140)) continue;
+      littleTree(c, x, y, .17 + (i % 4) * .035, 1);
+    }
+    hill(c, [0, 695, 155, 575, 270, 670, 430, 630, 565, 597, 650, 540, 790, 603,
+      960, 680, 1060, 555, 1220, 628, 1430, 718, 1600, 530, 1920, 664], '#94CDB1');
+    for (let i = 0; i < 25; i++) {
+      const x = 35 + i * 78, y = 735 + Math.sin(i * 1.31) * 28;
+      if (TUNE.towerX.some(towerX => Math.abs(towerX - x) < 140)) continue;
+      littleTree(c, x, y, .24 + (i % 3) * .045, 1);
+    }
+    hill(c, [0, 811, 150, 723, 300, 776, 480, 735, 610, 705, 760, 689, 930, 749,
+      1100, 818, 1300, 671, 1500, 756, 1650, 815, 1780, 713, 1920, 782], '#70B995');
+    // One tiny ruined arch adds a distant landmark without competing with the targets.
+    c.save(); c.translate(1460, 790); c.scale(.55, .55);
+    c.fillStyle = '#ABD1AF'; c.beginPath(); c.moveTo(-38, 0); c.lineTo(-38, -29); c.quadraticCurveTo(0, -74, 38, -29); c.lineTo(38, 0); c.fill();
+    c.fillStyle = '#70B995'; c.beginPath(); c.moveTo(-15, 0); c.lineTo(-15, -21); c.quadraticCurveTo(0, -47, 15, -21); c.lineTo(15, 0); c.fill();
     c.restore();
-    // The foreground edge uses the same exact height function as collision.
-    const earth = c.createLinearGradient(0, 715, 0, H);
-    earth.addColorStop(0, '#B4D77A'); earth.addColorStop(.45, '#A5CB78'); earth.addColorStop(1, '#B7D797');
-    terrainPath(c); c.fillStyle = earth; c.fill();
-    terrainPath(c, 21); c.fillStyle = '#99C879'; c.fill();
-    c.beginPath();
-    for (let x = 0; x <= W; x += 4) { if (!x) c.moveTo(x, groundY(x) + 7); else c.lineTo(x, groundY(x) + 7); }
-    c.strokeStyle = '#CCE691'; c.lineWidth = 14; c.stroke();
-    c.beginPath();
-    for (let x = 0; x <= W; x += 4) { if (!x) c.moveTo(x, groundY(x) + 23); else c.lineTo(x, groundY(x) + 23); }
-    c.strokeStyle = '#76B47B'; c.lineWidth = 3; c.stroke();
-    // Central hill details follow its slope; the lower center is calm for touch UI.
-    for (const [x, y, s] of [[68, 890, .85], [575, 862, .65], [1336, 856, .71], [1852, 891, .82]]) littleTree(c, x, y, s);
-    bush(c, 115, 899, .82); bush(c, 536, 873, .67, true); bush(c, 1402, 868, .62, true); bush(c, 1789, 899, .85);
-    // Tiny distant lookout on the central mound; non-colliding ornament below ground.
-    for (let i = 0; i < 9; i++) {
-      const x = 650 + i * 72 + Math.sin(i * 2) * 10, y = groundY(x) + 39 + (i % 3) * 7;
-      const s = 3.5 + (i % 3);
-      flower(c, x, y, s, i % 2 ? '#FFF6CA' : '#F2A8A0');
+
+  });
+}
+function makeForeground(terrain: Match['terrain']): Surface {
+  return surface(W, H, c => {
+    const height = (x: number) => groundY(x, terrain);
+    // This ridge edge is the collision profile, never a separate painted approximation.
+    const earth = c.createLinearGradient(0, 430, 0, H);
+    earth.addColorStop(0, '#B9D877'); earth.addColorStop(.55, '#9BC875'); earth.addColorStop(1, '#91BF76');
+    terrainPath(c, terrain); c.fillStyle = earth; c.fill();
+    terrainPath(c, terrain, 14); c.fillStyle = '#9BC776'; c.fill();
+    for (const [offset, width, color] of [[5, 10, '#D0E593'], [18, 3, '#78B57A']] as const) {
+      c.beginPath();
+      for (let x = 0; x <= W; x += 4) { if (!x) c.moveTo(x, height(x) + offset); else c.lineTo(x, height(x) + offset); }
+      c.strokeStyle = color; c.lineWidth = width; c.stroke();
     }
-    for (const [x, y, s] of [[194, 898, 7], [477, 893, 5], [1455, 892, 6], [1736, 904, 8]]) flower(c, x, y, s, '#FFF4CB');
-    // A handful of pebbles and soft grass cuts anchor the tower feet.
-    for (let i = 0; i < 21; i++) {
-      const x = (i * 173 + 83) % W, y = groundY(x) + 32 + (i * 19 % 66);
-      if (x > 600 && x < 1320 && y > 890) continue;
-      ellipse(c, x, y, 5 + i % 6, 3 + i % 3, i % 2 ? '#C5DE9B' : '#83B977', -.2);
+    // Warm exposed soil makes each persistent crater read as removed earth.
+    // The open edge itself still follows the exact current collision height.
+    for (const [offset, width, color] of [[10, 19, '#BCA16C'], [3, 4, '#9C875D']] as const) {
+      let drawing = false;
+      c.beginPath();
+      for (let x = 0; x <= W; x += 4) {
+        const changed = height(x) > groundY(x) + 3;
+        if (changed) {
+          if (!drawing) c.moveTo(x, height(x) + offset); else c.lineTo(x, height(x) + offset);
+        }
+        drawing = changed;
+      }
+      c.strokeStyle = color; c.lineWidth = width; c.stroke();
     }
+    // Shallow contours on the hills stay entirely under the colliding skyline.
+    for (const [begin, finish, depth] of [[420, 810, 73], [770, 1190, 102], [1180, 1540, 70]]) {
+      c.beginPath();
+      for (let x = begin; x <= finish; x += 5) {
+        const y = height(x) + depth + Math.sin((x - begin) / (finish - begin) * Math.PI) * 16;
+        if (x === begin) c.moveTo(x, y); else c.lineTo(x, y);
+      }
+      c.strokeStyle = '#88BC7459'; c.lineWidth = 5; c.stroke();
+    }
+    // Flowers and pebbles shrink with the world; they never pretend to block a shot.
+    for (let i = 0; i < 31; i++) {
+      const x = 32 + i * 62, y = height(x) + 29 + (i % 4) * 14;
+      if (height(x) > groundY(x) + 3) continue;
+      flower(c, x, y, 2.3 + (i % 3) * .6, i % 3 ? '#FFF4CB' : '#F2AAA0');
+    }
+    for (let i = 0; i < 44; i++) {
+      const x = (i * 173 + 83) % W, y = height(x) + 37 + (i * 19 % 118);
+      ellipse(c, x, y, 3 + i % 4, 2 + i % 2, i % 2 ? '#C5DE9B' : '#83B977', -.2);
+    }
+    bush(c, 63, height(63) + 19, .38); bush(c, 391, height(391) + 20, .28, true);
+    bush(c, 1530, height(1530) + 18, .3, true); bush(c, 1855, height(1855) + 20, .4);
+    TREES.forEach((tree, index) => {
+      if (!terrain.fallenTrees.includes(index)) { obstacleTree(c, tree, index); return; }
+      const y = height(tree.x);
+      // Low broken stumps are aftermath, no longer tall obstacles.
+      round(c, tree.x - 9, y - 5, 18, 10, 2, '#8D805B');
+      ellipse(c, tree.x, y - 5, 9, 3, '#D3B87B');
+      line(c, [tree.x - 23, height(tree.x - 23) + 9, tree.x - 13, height(tree.x - 13) + 6], '#9B8D5F', 4);
+      line(c, [tree.x + 15, height(tree.x + 15) + 7, tree.x + 25, height(tree.x + 25) + 13], '#9B8D5F', 3);
+    });
   });
 }
 function makeCloud(): Surface {
@@ -203,7 +262,8 @@ function makeTower(side: Side, health: number): Surface {
   });
 }
 function flag(c: Ctx, side: Side, now: number, active: boolean) {
-  const x = TUNE.towerX[side] + (side === 0 ? -132 : 132), y = TUNE.roofY + 40;
+  c.save(); c.translate(TUNE.towerX[side], TUNE.roofY); c.scale(TUNE.towerScale, TUNE.towerScale);
+  const x = side === 0 ? -132 : 132, y = 40;
   const d = side === 0 ? -1 : 1, wave = Math.sin(now / 370 + side) * 5;
   line(c, [x, y - 16, x, y + 130], '#6A9A84', 6);
   circle(c, x, y - 19, 7, '#F5D782');
@@ -218,14 +278,17 @@ function flag(c: Ctx, side: Side, now: number, active: boolean) {
     c.save(); c.globalAlpha = a;
     circle(c, x + d * 31, y + 14, 9, '#FFF6CB'); c.restore();
   }
+  c.restore();
 }
 
 export function createWorld(): { draw(ctx: Ctx, now: number, match: Match, options?: { title?: boolean }): void } {
   const backdrop = makeBackdrop(), cloud = makeCloud();
+  let foreground: Surface | undefined, cachedTerrain: Match['terrain'] | undefined, cachedRevision = -1;
   const towers = ([0, 1] as const).map(side => [0, 1, 2, 3].map(health => makeTower(side, health)));
   const cloudPositions = [
-    { x: 45, y: 185, s: .77, speed: 3.5 }, { x: 390, y: 78, s: .60, speed: 2.1 },
-    { x: 1070, y: 150, s: .65, speed: 2.8 }, { x: 1745, y: 335, s: .55, speed: 3.2 },
+    { x: 40, y: 245, s: .35, speed: 3.5 }, { x: 385, y: 220, s: .32, speed: 2.1 },
+    { x: 1090, y: 240, s: .36, speed: 2.8 }, { x: 1745, y: 326, s: .31, speed: 3.2 },
+    { x: 710, y: 285, s: .25, speed: 1.8 },
   ];
   return {
     draw(ctx, now, match, options = {}) {
@@ -234,11 +297,27 @@ export function createWorld(): { draw(ctx: Ctx, now: number, match: Match, optio
         const dx = Math.sin(now / (70000 / p.speed)) * 40;
         ctx.drawImage(cloud, p.x + dx, p.y, 400 * p.s, 150 * p.s);
       }
+      if (!foreground || cachedTerrain !== match.terrain || cachedRevision !== match.terrain.revision) {
+        foreground = makeForeground(match.terrain);
+        cachedTerrain = match.terrain; cachedRevision = match.terrain.revision;
+      }
+      ctx.drawImage(foreground, 0, 0);
+      if (match.phase === 'settle' && match.impact?.kind === 'tree' && match.impact.treeIndex !== undefined) {
+        const tree = TREES[match.impact.treeIndex];
+        const progress = Math.min(1, Math.max(0, (TUNE.settle - match.delay) / .7));
+        if (tree && progress < 1) {
+          ctx.save(); ctx.translate(tree.x, tree.baseY);
+          ctx.rotate((match.turn === 0 ? 1 : -1) * progress * progress * 1.25);
+          ctx.translate(-tree.x, -tree.baseY); ctx.globalAlpha = 1 - progress;
+          obstacleTree(ctx, tree, match.impact.treeIndex); ctx.restore();
+        }
+      }
       for (const side of [0, 1] as const) {
         const hp = Math.max(0, Math.min(3, match.health[side]));
         const hit = match.impact?.target === side && match.phase === 'settle';
         const shake = hit && hp > 0 ? Math.sin((TUNE.settle - match.delay) * 70) * Math.max(0, match.delay - .7) * 9 : 0;
-        ctx.drawImage(towers[side][hp], TUNE.towerX[side] - 175 + shake, TUNE.roofY - 20);
+        const scale = TUNE.towerScale;
+        ctx.drawImage(towers[side][hp], TUNE.towerX[side] - 175 * scale + shake, TUNE.roofY - 20 * scale, 350 * scale, 320 * scale);
         if (hp === 0 && hit) {
           // The last hit earns a quick physical-feeling crumble before the result.
           // One cached damaged tower sinks and tips into its already-drawn rubble.
@@ -246,8 +325,8 @@ export function createWorld(): { draw(ctx: Ctx, now: number, match: Match, optio
           const fall = progress * progress;
           ctx.save(); ctx.translate(TUNE.towerX[side], TUNE.baseY);
           ctx.rotate((side === 0 ? -1 : 1) * fall * .28);
-          ctx.scale(1 + fall * .06, 1 - fall * .85); ctx.globalAlpha = 1 - progress;
-          ctx.drawImage(towers[side][1], -175, TUNE.roofY - TUNE.baseY - 20);
+          ctx.scale(scale * (1 + fall * .06), scale * (1 - fall * .85)); ctx.globalAlpha = 1 - progress;
+          ctx.drawImage(towers[side][1], -175, (TUNE.roofY - TUNE.baseY) / scale - 20);
           ctx.restore();
         }
         if (hp > 0) flag(ctx, side, now, !options.title && match.turn === side && match.phase === 'aim');

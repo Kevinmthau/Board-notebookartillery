@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { advance, beginShot, createMatch, TUNE, type Match, type Side } from '../src/artillery';
+import { advance, beginShot, createMatch, groundY, resolveImpact, TREES, TUNE, type Match, type Side } from '../src/artillery';
 import { chooseShot } from '../src/opponent';
 
 function playShot(match: Match) {
@@ -36,19 +36,37 @@ test('both sides land ordinary shots in headwinds and tailwinds while leaving re
         if (match.health[(1 - turn) as Side] < TUNE.health) hits++;
         assert.equal(match.health[turn], TUNE.health, 'AI must not shoot its own tower');
       }
-      assert.ok(hits >= 96 && hits <= 136, `side ${turn}, wind ${wind}: ${hits}/160 hits should be capable but fallible`);
+      assert.ok(hits >= 80 && hits <= 120, `side ${turn}, wind ${wind}: ${hits}/160 hits should be capable but fallible`);
     }
   }
 });
 
-test('complete matches progress through real flight, damage, and victory within 24 shots', () => {
+test('complete matches progress through obstacles, real flight, and victory within 40 shots', () => {
   for (let seed = 1; seed <= 16; seed++) {
     const match = createMatch(seed * 1337);
     let shots = 0;
-    while (match.phase !== 'over' && shots < 24) { playShot(match); shots++; }
+    while (match.phase !== 'over' && shots < 40) { playShot(match); shots++; }
     assert.equal(match.phase, 'over', `seed ${seed} stalled after ${shots} shots`);
     assert.ok(match.winner === 0 || match.winner === 1);
     assert.equal(match.health[(1 - match.winner!) as Side], 0);
     assert.ok(shots >= 5, 'victory still requires three alternating direct hits');
   }
+});
+test('Pip plans against damaged terrain without modifying the match or reusing another shape', () => {
+  let hits=0;
+  for(let seed=1;seed<=40;seed++) {
+    const match=createMatch(seed*7919);match.wind=0;
+    // The same revision can represent different holes in different matches.
+    const tree=TREES[seed%TREES.length];
+    beginShot(match);resolveImpact(match,{x:tree.x,y:groundY(tree.x),kind:'ground',target:null});advance(match,2);
+    match.wind=0;match.turn=(seed%2) as Side;
+    const before=structuredClone(match),shot=chooseShot(match);
+    assert.deepEqual(match,before,'planning cannot reshape the terrain');
+    assert.deepEqual(chooseShot(match),shot,'same damage and wind should plan consistently');
+    const side=match.turn;
+    beginShot(match,shot.angle,shot.power);
+    for(let frame=0;frame<800&&match.phase==='flight';frame++)advance(match,1/60);
+    if(match.health[(1-side) as Side]<TUNE.health)hits++;
+  }
+  assert.ok(hits>=16&&hits<=34,`${hits}/40 changed-terrain hits must remain capable and fallible`);
 });

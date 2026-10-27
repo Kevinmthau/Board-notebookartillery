@@ -38,7 +38,6 @@ const LEARN: Box = {x:740,y:830,w:440,h:120};
 const PICK: Box = {x:600,y:720,w:720,h:140};
 const START: Box = {x:665,y:886,w:590,h:140};
 const BACK: Box = { x: 64, y: 48, w: 200, h: 120 };
-const HELP: Box = { x: 900, y: 210, w: 120, h: 120 };
 const AGAIN: Box = {x:530,y:680,w:420,h:140};
 const SETUP: Box = {x:980,y:680,w:420,h:140};
 const inside = (p: { x: number; y: number }, b: Box) => p.x >= b.x && p.x <= b.x+b.w && p.y >= b.y && p.y <= b.y+b.h;
@@ -136,7 +135,7 @@ function powerBox():Box {return {x:700,y:886,w:660,h:146};}
 function fireBox():Box {return {x:1450,y:888,w:400,h:144};}
 function setPower(x:number) { const b=powerBox();match.power[match.turn]=Math.round(clamp(20+(x-b.x-32)/(b.w-64)*80,20,100));updateLabel(); }
 function setAim(p:{x:number;y:number}) {
-  const side=match.turn, dx=(p.x-TUNE.towerX[side])*(side===0?1:-1),dy=610-p.y;
+  const side=match.turn, dx=(p.x-TUNE.towerX[side])*(side===0?1:-1),dy=TUNE.cannonY-p.y;
   if (Math.hypot(dx,dy)<25) return;
   match.angle[side]=Math.round(clamp(Math.atan2(dy,Math.max(1,dx))*180/Math.PI,15,80)); updateLabel();
 }
@@ -150,7 +149,6 @@ function press(p:{x:number;y:number},id:number) {
   if (mode==='setup') { if(inside(p,BACK))setMode('title');else if(inside(p,PICK))void selectOpponent();else if(inside(p,START))startMatch();return; }
   if (mode==='help') { if(inside(p,BACK))setMode(previous);else if(inside(p,PICK)){helpPage++;if(helpPage>2)setMode(previous);}return; }
   if (mode==='over') {if(inside(p,AGAIN))newMatch();else if(inside(p,SETUP))changeSetup();return;}
-  if (inside(p,HELP)) {previous='play';helpPage=0;setMode('help');return;}
   if (!currentHuman()) return;
   const q=p;
   if (inside(q,fireBox())) {shoot();return;}
@@ -232,11 +230,11 @@ function update(now:number,dt:number) {
       aiDelay-=dt;
       if(aiDelay<=0&&aiPlan&&seats.every(s=>s.side!==null&&hasCannon(s.side))) {beginShot(match,aiPlan.angle,aiPlan.power);sound('fire');persist();}
     }
-    const before=match.phase;advance(match,dt);
+    const before=match.phase,terrainBefore=match.terrain.revision;advance(match,dt);
     if(match.impact&&match.impact.serial!==impactSerial){
       impactSerial=match.impact.serial;const hit=match.impact.kind==='hit';
-      particles.burst(match.impact.x,match.impact.y,{count:hit?50:24,color:hit?'#ffcc63':'#b4ce78',speed:hit?390:210,life:1,gravity:480,size:12,glow:false});
-      sound(hit?'hit':'miss');cue(hit?'Direct hit!':'Try a little more arc',1.1);persist();
+      particles.burst(match.impact.x,match.impact.y,{count:hit?50:32,color:hit?'#ffcc63':match.impact.kind==='tree'?'#8fc573':'#c7a16b',speed:hit?390:250,life:1,gravity:480,size:10,glow:false});
+      sound(hit?'hit':'miss');cue(hit?'Direct hit!':match.impact.kind==='tree'?'Timber!':match.impact.kind==='ground'?(match.terrain.revision>terrainBefore?'New crater!':'Ground hit!'):'Just missed!',1.1);persist();
     }
     if(before!==match.phase)persist();
     if(match.phase==='over'){setMode('over');sound('win');persist();}
@@ -287,14 +285,14 @@ function controls(side:Side){
 }
 function drawShots(){
   if(match.phase==='aim'&&(browser||hasCannon(match.turn))){
-    const dots=preview(match,.43,shotOrigin());ctx.fillStyle=colors[match.turn];
-    dots.forEach((p,i)=>{ctx.globalAlpha=.8-i*.085;ctx.beginPath();ctx.arc(p.x,p.y,7-i*.5,0,Math.PI*2);ctx.fill();});ctx.globalAlpha=1;
+    const dots=preview(match,.30,shotOrigin());ctx.fillStyle=colors[match.turn];
+    dots.forEach((p,i)=>{ctx.globalAlpha=.8-i*.12;ctx.beginPath();ctx.arc(p.x,p.y,5-i*.5,0,Math.PI*2);ctx.fill();});ctx.globalAlpha=1;
   }
   const p=match.projectile;
   if(p){
-    ctx.lineCap='round';ctx.lineWidth=10;ctx.strokeStyle='#fffbeab0';ctx.beginPath();p.trail.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
+    ctx.lineCap='round';ctx.lineWidth=6;ctx.strokeStyle='#fffbeab0';ctx.beginPath();p.trail.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
     if(p.y<35){text('↑',clamp(p.x,400,1520),52,48,colors[match.turn]);}
-    else{ctx.beginPath();ctx.arc(p.x,p.y,18,0,Math.PI*2);ctx.fillStyle='#153e50';ctx.fill();ctx.beginPath();ctx.arc(p.x-5,p.y-6,5,0,Math.PI*2);ctx.fillStyle='#adc8cb';ctx.fill();}
+    else{ctx.beginPath();ctx.arc(p.x,p.y,TUNE.ballRadius,0,Math.PI*2);ctx.fillStyle='#153e50';ctx.fill();ctx.beginPath();ctx.arc(p.x-3,p.y-3,3,0,Math.PI*2);ctx.fillStyle='#adc8cb';ctx.fill();}
   }
 }
 let pieceImage: HTMLImageElement|null=null;
@@ -339,7 +337,7 @@ function drawHelp(){
   text(titles[helpPage],960,220,72);
   round({x:440,y:330,w:1040,h:330},36,cream);
   if(helpPage===0){equipment(625,480,190);text(browser?'Drag from your tower.':'Cannon goes on your tower.',1110,425,40);text(browser?'Use − / + to adjust the angle.':'Turn to change the arc.',1110,490,40);text('The dotted arc shows your aim.',1110,555,32);}
-  if(helpPage===1){text('Higher power flies farther.',960,420,48);text('Watch the wind arrow before you fire.',960,500,40);text('Tap Fire when your aim feels right.',960,570,40);}
+  if(helpPage===1){text('Lob over hills and treetops.',960,420,48);text('Shots dig craters and knock down trees.',960,500,40);text('Open a path. Watch the wind. Tap Fire.',960,570,40);}
   if(helpPage===2){text('Take turns. Knock down the other tower.',960,420,48);drawHealth(0,960,510);text('Each direct hit breaks one heart.',960,590,40);}
   button(PICK,helpPage<2?'NEXT':previous==='play'?'BACK TO GAME':'GOT IT');label(`${helpPage+1} / 3`,960,934);
 }
@@ -359,9 +357,9 @@ function draw(now:number){
   else if(mode==='help')drawHelp();
   else{
     drawShots();
-    playerCard(0);playerCard(1);wind();if(mode==='play'){button(HELP,'?',cream);controls(match.turn);}
+    playerCard(0);playerCard(1);wind();if(mode==='play')controls(match.turn);
     if(mode==='play'){
-      if(!hasCannon(match.turn)&&!isAI(match.turn)) {ctx.save();ctx.strokeStyle=colors[match.turn];ctx.lineWidth=5;ctx.setLineDash([14,12]);ctx.beginPath();ctx.ellipse(TUNE.towerX[match.turn],610,86,38,0,0,Math.PI*2);ctx.stroke();ctx.restore();cue('Return your cannon to its tower',.2);}
+      if(!hasCannon(match.turn)&&!isAI(match.turn)) {ctx.save();ctx.strokeStyle=colors[match.turn];ctx.lineWidth=5;ctx.setLineDash([14,12]);ctx.beginPath();ctx.ellipse(TUNE.towerX[match.turn],TUNE.cannonY,86,38,0,0,Math.PI*2);ctx.stroke();ctx.restore();cue('Return your cannon to its tower',.2);}
       if(browser&&match.shots[0]+match.shots[1]===0) {round({x:670,y:760,w:580,h:72},24,'#fffbea');label('Drag from your tower to aim',960,796,teal);}
       if(bannerTime>0){round({x:580,y:370,w:760,h:100},30,'#fffbea');text(banner,960,420,48);}
     }
@@ -383,8 +381,8 @@ void(async()=>{
   if(Board.isOnDevice)Board.session.onPlayersChanged(syncRoster);
   [footprints]=await Promise.all([loadPieceFootprints(),loadTitleFont()]);
   saved=BoardPlatform.state.load<typeof saved>();
-  if(saved?.version!==1||!saved.match||saved.match.phase==='over')saved=undefined;
-  BoardPlatform.state.onRestore(()=>{syncRoster();if(mode==='title'){saved=BoardPlatform.state.load<typeof saved>();if(saved?.version!==1)saved=undefined;}});
+  if(saved?.version!==1||!saved.match?.terrain||saved.match.phase==='over')saved=undefined;
+  BoardPlatform.state.onRestore(()=>{syncRoster();if(mode==='title'){saved=BoardPlatform.state.load<typeof saved>();if(saved?.version!==1||!saved.match?.terrain||saved.match.phase==='over')saved=undefined;}});
   BoardPlatform.menu.setButtons([{id:'help',title:'How to play',icon:'square'},{id:'restart',title:'Rematch',icon:'circular_arrow'},{id:'setup',title:'Change setup',icon:'left_arrow'}]);
   BoardPlatform.menu.onButton(id=>{if(id==='help'){previous=mode;helpPage=0;setMode('help');}if(id==='restart'){if(seats.length===2&&seats.every(s=>s.side!==null))newMatch();else enterSetup();}if(id==='setup')changeSetup();});
   ready=true;updateLabel();requestAnimationFrame(frame);

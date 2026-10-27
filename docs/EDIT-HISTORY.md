@@ -25,3 +25,9 @@ User requested one Play button oriented with the landscape after seeing the rota
 User requested landscape setup, help, power/Fire controls, and a working start flow. All UI now faces the landscape, including results, player names, health, and wind. Touch hit tests use the same unrotated positions. Setup shows roster and cannon readiness with an explicit Start Game button.
 
 Fixed choosing an opponent when the lone human owns the right tower: the selector now adds the second player instead of replacing the first. Canceled selection can be retried. Two human cannons or one human cannon plus Pip must be ready before Start. Saved side assignments are restored before binding physical cannons, and both title taps and cannon arrivals use the same saved-aware entry path. Expanded the native integration test through these startup paths and landscape firing, pause recovery, and rematch.
+
+## October 27, 2026 — wider valley and obstacles
+
+User requested removal of the in-game question mark and said opposing towers were too easy to hit: “zoom way out and put more hills and trees in the way as obstacles.” Removed the button and its hit target; help remains in the title and system menu. Reduced tower/landmark scale, widened tower spacing, and added three hills and ten solid foreground trees sharing collision geometry with the rendering. Updated real Cannon dock positions, shorter launch preview, obstacle feedback, shot tuning, and Pip's planning for the new battlefield.
+
+User then chose “Destructible hills and trees.” Ground impacts now carve persistent craters, tree impacts knock trees down, and blasts can undermine tree roots. Rendering, collision, and AI planning use the changed terrain; rematch restores the field. Physical tower platform ground remains fixed.

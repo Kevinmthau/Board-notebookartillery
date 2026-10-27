@@ -2,7 +2,7 @@
 
 | File or source | Role | Origin | Rights / usage |
 |---|---|---|---|
-| `src/world.ts` | Cached landscape, title world, stone towers, flags, plants, damage and collapse | Original Canvas artwork authored for this project | Project source |
+| `src/world.ts` | Cached wide landscape, smaller stone towers/flags, distant forests, solid obstacle trees, damage and collapse | Original Canvas artwork authored for this project; solid shapes share `src/artillery.ts` geometry | Project source |
 | `src/main.ts` | Hearts, controls, projectile, trail, teaching UI, synthesized sound effects | Original project code; sounds use platform-managed Web Audio effects bus | Project source |
 | `src/fx.ts` | Finite placement splashes and impact particles | Supplied Board Studio starter | Board starter asset |
 | `public/piece-art/2.png` | Canonical Cannon identification in help only | board-games-ai `save-the-bloogs` catalog | Board-supplied product art; internal prototype use |

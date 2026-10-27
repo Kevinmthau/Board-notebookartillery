@@ -21,15 +21,15 @@
 
 ## Rules
 
-- Two towers face each other across one colorful valley. Players alternate one shot at a time.
+- Two smaller towers face each other across a wide colorful valley with three intervening ridges and ten solid foreground trees. Players alternate one shot at a time.
 - Each tower starts with three health points. Hits crack the facade; its platform stays fixed until final collapse.
-- A miss changes no health. Terrain blocks a shot. No timer rushes a human turn.
+- A miss changes no tower health. Hills, tree trunks, and tree crowns block shots; distant pale trees are scenery. A terrain hit carves a lasting crater. A tree hit knocks it down; digging away its roots also brings it down. Later shots and Pip use the changed terrain. No timer rushes a human turn.
 - Angle is between 15 and 80 degrees. The first resting cannon direction represents 45 degrees. Power is between 20 and 100 percent.
 - Gravity and wind affect every shot. Wind changes between turns and is visible before firing.
-- A short dotted arc shows the start of the trajectory, not the full landing location.
+- A short 0.30-second dotted arc shows the launch direction, not the landing location. The smaller target and taller obstacles require a more precise lob.
 - All tuning values live together. Both players and AI use the same trajectory and hit rules.
 - The first prototype has one valley, one shot type, tower damage, victory, and rematch.
-- Terrain destruction, weapons, progression, networking, and additional piece roles are outside this first build.
+- Weapons, progression, networking, and additional piece roles are outside this build.
 - Placement binds ownership and acknowledges the cannon. Placement never fires.
 - Rotation sets elevation. Moving a piece does not move its tower or dodge a shot.
 - Lifting a cannon blocks that player's next shot until it returns. It does not erase health or ownership.
@@ -38,13 +38,15 @@
 - Browser play shows the towers and trajectory only. Drag from a tower or use angle controls, set power, then fire.
 - Real piece renders identify equipment in help only. Setup keeps the actual tower platforms visible. No cannon render follows a physical piece.
 - Fire is a separate deliberate finger action. A shot already in flight completes before another begins.
-- Hit feedback: a quick squash, colored burst, falling masonry, sound, and one clear health change.
+- Hit feedback: a quick squash, colored burst, falling masonry, sound, and one clear health change. Miss feedback identifies whether the shot struck a hillside or treetop.
+- Terrain damage persists through turns, pause, and same-build saves. Rematch creates fresh hills and trees. Physical tower platforms stay fixed and their immediate ground is protected so real cannons do not need repositioning after a blast.
 - Victory: the tower falls and a short celebration leads to a shared result choice.
 
 ## Players and seating
 
 - Two players own the left and right towers. Every screen and label faces the landscape on Board and in the browser, as requested by the user after trying the Board build.
 - One shared horizontal power slider and Fire button control the active player's shot. Player names, health, wind, setup, help, and results use the same upright orientation.
+- The in-game question-mark button is removed. How to Play remains on the title screen and in the platform menu.
 - Board's selector in `src/seats.ts` supplies every player and AI. Identity follows `sessionId`.
 - A Cannon placed at an unclaimed tower binds the next unbound human in the roster.
 - Setup shows the chosen roster and cannon readiness separately. Choose Your Opponent opens Board's selector. While fewer than two players are seated it always adds a player, even when the first human owns the right tower. It never invents an anonymous native player.
@@ -91,7 +93,8 @@
 
 - Colorful Bloogs-inspired world chosen by the user. Original scenery, not Notebook Artillery's notebook artwork.
 - Turquoise, warm coral, butter yellow, fresh green, and sky blue; rounded shapes with strong readable silhouettes.
-- Chunky stone towers, layered rolling hills, small trees, clouds, pennants, and animated debris.
+- Towers, flags, and stone details use 58% of their earlier scale. Towers sit farther apart at x=240 and x=1680; the real Cannon centers sit at y=678, with their original physical footprint clearance preserved.
+- Three ridges, solid foreground trees, pale distant forests, smaller clouds and sun create the wider battlefield. Ground and solid tree geometry are shared with physics so visible obstacles stop shots at their outlines.
 - Key art, play, help, and results use the same world. Draw scenery once into cached layers.
 - Screen space around physical cannons stays clean. No drawn cannon or persistent follower.
 - Canvas typography follows the starter font helpers. In-play text is at least 48 px, other text 32 px.
@@ -114,6 +117,9 @@
 | Title orientation | One landscape-facing title and Play button | person | Board screenshot correction, October 27 | Overrides the earlier repeated seat-facing title layout |
 | All-screen orientation | Landscape setup, help, gameplay controls, and results | person | Follow-up correction, October 27 | Replaces all seat-facing UI and rotated touch hit tests |
 | Start flow | Explicit Start Game after roster and cannon readiness | builder | User requested reliable starting | Add the second player rather than replacing a lone right-side player |
+| Battlefield difficulty | Zoomed-out view, smaller targets, more hills and trees | person | Browser feedback, October 27 | Targets were too easy to hit; obstacles affect collisions |
+| In-play help button | Removed | person | Browser annotation, October 27 | Help stays in title and system menu |
+| Obstacle durability | Destructible hills and trees | person | Preference answer, October 27 | Persistent craters, felled trees, and AI reacting to changed terrain |
 | Aim | Relative rotation from initial resting pose | builder | Avoid absolute-facing confusion | Keep zero through blinks and pause |
 | Recipe | Aim Blast, adapted to deliberate turn-based fire | builder | Genre recipes | No automatic shots |
 | Publishing | Local preview and packaged webapp first | builder | Requested Studio workflow | No external publish or push requested |

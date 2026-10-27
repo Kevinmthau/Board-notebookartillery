@@ -4,6 +4,8 @@ A first playable artillery duel for Board, built from the exact `board-games-ai`
 
 Use the physical Save the Bloogs Cannon pieces. There is no digital cannon during play. Turn to aim, set power, and tap Fire. Three direct hits topple the other tower. Two players share the screen, or choose Pip as a computer opponent.
 
+The wider battlefield has smaller towers, three hills, and ten destructible trees. Shots carve lasting craters and knock trees down, opening paths for later shots. Pale distant trees are scenery. Rematch restores the battlefield.
+
 ## Play in a browser
 
 ```sh
@@ -16,7 +18,7 @@ Open `http://127.0.0.1:5173/` (or the port Vite reports). Select **Play**, then 
 - Drag from your tower to aim, or use the **− / +** controls.
 - Drag the power track, then tap **Fire**.
 - Left/right arrows adjust angle. Up/down arrows adjust power. Space fires.
-- Press **P** for the simulated Board menu. Help is also available with **?**.
+- Press **P** for the simulated Board menu, which includes **How to play**.
 - The browser shows only towers, shots, and scenery. No cannon proxy is drawn.
 
 ## Standalone browser build
@@ -39,6 +41,8 @@ board-connect install bloog-barrage.webapp.zip --launch
 The native package contains the configured Board platform and Save the Bloogs model. It excludes browser simulation files.
 
 Tap **Play**, choose your opponent using Board's player selector, and put each human player's physical Cannon on its tower platform. Setup shows player and cannon readiness; tap **Start Game** when ready. Pip needs no physical cannon. All screens face the landscape, with one shared power slider and Fire button for the active player. Keep the cannon on its platform while turning; Fire is disabled if it is missing or displaced. The initial resting facing defines 45 degrees. Turn counterclockwise on the left and clockwise on the right to raise the shot.
+
+The smaller towers now sit farther toward the left and right edges. Move the real cannons to those new tower positions when using this build.
 
 The app identity is committed in `board.config.json`; do not change it after installation.
 

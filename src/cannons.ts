@@ -1,9 +1,10 @@
 import { BoardContactPhase, BoardContactType, type BoardContact } from '@board.fun/web-sdk';
 import { angleDeltaDeg, pieceFootprint, type PieceFootprints } from './piece-footprints';
+import { TUNE } from './artillery';
 
 export type CannonSide = 0 | 1;
 export const CANNON_GLYPH = 2;
-export const CANNON_DOCKS = [{ x: 330, y: 610 }, { x: 1590, y: 610 }] as const;
+export const CANNON_DOCKS = [{ x: TUNE.towerX[0], y: TUNE.cannonY }, { x: TUNE.towerX[1], y: TUNE.cannonY }] as const;
 export const CANNON_TRACKING = {
   legalRadius: 110, rebindRadius: 140, rebindMs: 900, resumeMs: 2000,
   glyphFlapMs: 250, zeroReadings: 12, deadBandDeg: 4, smoothing: .12,

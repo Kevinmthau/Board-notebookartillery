@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { Board, BoardContactPhase, BoardContactType, BoardPlayerType, type BoardContact, type BoardPlayer } from '@board.fun/web-sdk';
 import type { Match, Side } from '../src/artillery';
+import { CANNON_DOCKS } from '../src/cannons';
 
 const g = globalThis as unknown as Record<string, unknown>;
 let aria = '', now = 1000, raf: ((time: number) => void) | null = null;
@@ -101,7 +102,7 @@ function run(seconds: number) {
   }
 }
 const piece = (id: number, side: Side, facing = side === 0 ? 0 : 180, phase = BoardContactPhase.Moved): BoardContact => ({
-  contactId: id, glyphId: 2, type: BoardContactType.Glyph, phase, x: side === 0 ? 330 : 1590, y: 610,
+  contactId: id, glyphId: 2, type: BoardContactType.Glyph, phase, x: CANNON_DOCKS[side].x, y: CANNON_DOCKS[side].y,
   orientation: facing - 180, isTouched: false,
 });
 const finger = (id: number, x: number, y: number, phase: BoardContactPhase): BoardContact => ({
@@ -179,7 +180,7 @@ test('native landscape setup starts two-player and solo matches, with deliberate
   assert.equal(saved.match.turn, 0); assert.equal(saved.match.phase, 'aim');
 
   // Native menu pause clears contacts. Re-detection gets new ids and must not commit a shot.
-  const beforePause = totalShots(), health = [...saved.match.health];
+  const beforePause = totalShots(), health = [...saved.match.health], terrain = structuredClone(saved.match.terrain);
   // The finger begins off Fire, then moves onto it without a new press. It is held when the menu opens.
   emit(finger(299, 1650, 800, BoardContactPhase.Began));
   emit(finger(299, 1650, 960, BoardContactPhase.Moved)); run(.1);
@@ -191,12 +192,14 @@ test('native landscape setup starts two-player and solo matches, with deliberate
   emit(finger(300, 1650, 960, BoardContactPhase.Began)); run(.1);
   assert.equal(totalShots(), beforePause, 'post-menu finger re-detection fired before a new deliberate press');
   emit(finger(300, 1650, 960, BoardContactPhase.Ended)); run(.6);
-  assert.deepEqual(saved.match.health, health); fire(0, 301);
+  assert.deepEqual(saved.match.health, health);
+  assert.deepEqual(saved.match.terrain, terrain, 'pause healed the battlefield'); fire(0, 301);
   assert.equal(totalShots(), beforePause + 1, 'fresh Fire after resume was not accepted'); run(8);
 
   // The platform's rematch action preserves current physical bindings without another setup gate.
   assert.ok(menu); menu('restart'); run(.5);
   assert.deepEqual(saved.match.health, [3, 3]); assert.deepEqual(saved.match.shots, [0, 0]);
+  assert.deepEqual(saved.match.terrain.craters, []); assert.deepEqual(saved.match.terrain.fallenTrees, []);
   assert.equal(saved.match.phase, 'aim'); fire(0, 302);
   assert.equal(saved.match.shots[0], 1, 'rematch lost the resting native cannon');
 
@@ -237,6 +240,7 @@ test('native landscape setup starts two-player and solo matches, with deliberate
   assert.equal(saved.match.phase, checkpoint.match.phase, 'Continue started a new match');
   assert.deepEqual(saved.match.shots, checkpoint.match.shots, 'Continue reset shot counts');
   assert.deepEqual(saved.match.health, checkpoint.match.health, 'Continue reset tower health');
+  assert.deepEqual(saved.match.terrain, checkpoint.match.terrain, 'Continue reset terrain damage');
   assert.deepEqual(saved.sides, checkpoint.sides, 'Continue rebound the right-side human to the wrong tower');
   assert.deepEqual(errors, []); assert.ok(aria.length > 0);
 });
