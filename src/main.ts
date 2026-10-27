@@ -33,8 +33,8 @@ let saved: { version: number; match: Match; sides: {sessionId:number;side:Side}[
 const active = new Map<number, BoardContact>();
 const unsupported = new Set<number>();
 const gestures = new Map<number, { kind: 'angle' | 'power'; side: Side }>();
-const PLAY: Box = browser?{x:665,y:660,w:590,h:142}:{x:790,y:300,w:150,h:480};
-const LEARN: Box = browser?{x:740,y:830,w:440,h:120}:{x:980,y:300,w:150,h:480};
+const PLAY: Box = {x:665,y:660,w:590,h:142};
+const LEARN: Box = {x:740,y:830,w:440,h:120};
 const PICK: Box = browser?{x:600,y:720,w:720,h:140}:{x:840,y:290,w:240,h:500};
 const BACK: Box = { x: 64, y: 48, w: 200, h: 120 };
 const HELP: Box = { x: 900, y: 210, w: 120, h: 120 };
@@ -304,15 +304,11 @@ let pieceImage: HTMLImageElement|null=null;
 if(typeof Image!=='undefined'){pieceImage=new Image();pieceImage.src='piece-art/2.png';}
 function equipment(x:number,y:number,size=170){if(pieceImage?.complete&&pieceImage.naturalWidth)ctx.drawImage(pieceImage,x-size/2,y-size/2,size,size);}
 function drawTitleScreen(now:number){
-  if(!browser){
-    for(const side of [0,1]){ctx.save();ctx.translate(side===0?440:1480,540);ctx.rotate(side===0?Math.PI/2:-Math.PI/2);drawTitle(ctx,{x:-470,y:-240,width:940,height:380},{ink});text('Place your real cannon to begin',0,160,40);ctx.restore();}
-    button(PLAY,saved?'CONTINUE':'PLAY');button(LEARN,'HELP',cream);return;
-  }
-  // This title uses the same authored valley as play; there is no cannon sprite.
+  // One shared title faces the landscape on Board and in the browser.
   ctx.fillStyle='#eefaf118';ctx.fillRect(0,0,1920,1080);
   round({x:620,y:118,w:680,h:68},34,'#fffbea');label('A LITTLE AIM. A BIG KABOOM.',960,153,teal);
   drawTitle(ctx,{x:130,y:210,width:1660,height:430},{ink});
-  button(PLAY,saved?'CONTINUE':'LET’S PLAY');
+  button(PLAY,saved?'CONTINUE':'PLAY');
   button(LEARN,'HOW TO PLAY',cream);
   label('2 PLAYERS  /  SOLO VS PIP',960,1002,ink);
 }

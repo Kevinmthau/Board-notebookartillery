@@ -44,6 +44,7 @@
 ## Players and seating
 
 - Two seats: left and right edges of Board. Browser HUDs face the screen viewer.
+- The shared opening screen faces the landscape, with one upright title and one horizontal Play button, as requested by the user after trying the Board build.
 - On Board, each seat's controls and name face its edge. Shared result labels are repeated facing each seat within one result surface.
 - Board's selector in `src/seats.ts` supplies every player and AI. Identity follows `sessionId`.
 - A Cannon placed at an unclaimed tower binds the next unbound human in the roster.
@@ -60,7 +61,7 @@
 
 | State | Next action | Signal | Ends when |
 |---|---|---|---|
-| Title | Place a Cannon or enter browser setup | Colorful valley, moving clouds, title, real equipment preview | Setup begins |
+| Title | Tap Play or place a Cannon | Colorful valley, moving clouds, one landscape-facing title and Play button | Setup begins |
 | Setup | Choose people and place cannons | Canonical Cannon picture and empty tower destination | Required pieces are present |
 | Aim | Turn the cannon | Active tower banner, angle numeral, short shot arc | Fire is tapped |
 | Power | Set strength | Large power track and percent numeral | Shot begins |
@@ -111,6 +112,7 @@
 | Cannon depiction | Physical piece only | person | Correction | No digital cannon in play, even for AI |
 | Win | Three direct hits | builder | Proposed first playable | Fast enough to test complete matches |
 | Seats | Left and right edges | builder | Tower duel geometry | Seat-oriented native HUD |
+| Title orientation | One landscape-facing title and Play button | person | Board screenshot correction, October 27 | Overrides the earlier repeated seat-facing title layout |
 | Aim | Relative rotation from initial resting pose | builder | Avoid absolute-facing confusion | Keep zero through blinks and pause |
 | Recipe | Aim Blast, adapted to deliberate turn-based fire | builder | Genre recipes | No automatic shots |
 | Publishing | Local preview and packaged webapp first | builder | Requested Studio workflow | No external publish or push requested |

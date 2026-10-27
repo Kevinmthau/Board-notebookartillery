@@ -80,3 +80,12 @@ The first playable does not include destructible ground, weapons, online multipl
 - **Startup logs:** Platform state became ready. Only missing favicon and optional game-font.json warnings appeared; no application exception was reported.
 - **Screenshot:** `docs/screenshots/board-installed.png`.
 - **Still unverified:** Real Cannon recognition, aiming feel, full hardware match, and human feedback. These await the user's playtest.
+
+## October 27, 2026 — landscape opening screen
+
+- **Request:** Make the opening screen face the landscape, with one Play button instead of duplicated rotated labels.
+- **Change:** Board and browser share one upright title, one horizontal Play button, and one horizontal How to Play button. The previous native title layout is superseded by this user decision.
+- **Automated evidence:** `npm test`: 100 passed, 0 failed, 3 inherited skips. `npm run build:web` passed TypeScript, Vite, native packaging, and browser packaging.
+- **Platform build:** `d19865fdcbeeac66`; appId and packageId preserved.
+- **Board evidence:** Reinstalled and launched on KT's Board. Inspected `docs/screenshots/board-title-landscape.png`: one upright title and one horizontal Play button align with the landscape. Startup logs show state ready and no application exception; the existing optional font metadata and favicon warnings remain.
+- **Scope:** Opening layout only; physical Cannon controls and match rules are unchanged.
