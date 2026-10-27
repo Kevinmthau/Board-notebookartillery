@@ -24,4 +24,10 @@
 - [x] Add occasional moving birds with visible flight paths, collision feedback, and pause/save continuity.
 - [x] Verify randomized rematches and birds in the browser, then install the updated Board package.
 - [x] Prepare the requested public GitHub publication with a history review, passing tests, and successful Board/browser builds.
+- [x] Anchor native aim dots and the fired ball to the real Cannon spout using the canonical footprint and sensed facing.
+- [x] Verify both native aim/launch origins through rotation, displacement, pause re-detection, and glyph-zero readings; test, package, and install the update on Board.
+- [x] Correct the origin-only fix: native guide and shot leave straight along the sensed barrel, with an accurate angle readout and no relative calibration or native angle clamp.
+- [x] Test every native guide sample and launch velocity, including angles outside 15–80°, then package and install the barrel-direction correction on Board.
+- [x] User confirms the guide comes straight out of the real Cannon spout on Board.
+- [ ] Visually verify spout alignment after pause recovery on Board with real Cannons.
 - [ ] Complete a full hardware match and collect feedback on aiming feel, reach, and pacing.

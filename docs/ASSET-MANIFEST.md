@@ -10,7 +10,7 @@
 | `public/piece-art/3.png` | Stairs reference, unused by gameplay | Same catalog | Board-supplied product art |
 | `public/piece-art/4.png` | Block reference, unused by gameplay | Same catalog | Board-supplied product art |
 | `public/fonts/itc-kabel-ultra.otf` | All game text via starter font helpers | Exact Studio starter | Board's bundled font |
-| `public/piece-footprints.json` | Real outlines, facing correction, and cannon clearance | Save the Bloogs catalog | Board-supplied data |
+| `public/piece-footprints.json` | Real outlines, facing correction, cannon clearance, and shared spout position/barrel direction for native aim and launch | Save the Bloogs catalog | Board-supplied data |
 | `public/model.dla` | Save the Bloogs recognition model 1.3.4 | Save the Bloogs catalog | Board-supplied device model |
 
 No Notebook Artillery artwork or audio is copied. No generated cannon or cannon gameplay sprite is included.

@@ -1,5 +1,27 @@
 # Acceptance ledger: Bloog Barrage
 
+## October 27, 2026 — Barrel alignment accepted and committed
+
+- **Human evidence:** After trying build `ddb169a45a95c862` on Board, the user confirmed: “That works now,” and requested committing and pushing the fix. Real-piece spout/guide alignment is accepted. This does not establish a separate pause-recovery playtest or a complete hardware match.
+- **Handover:** Commit the shared physical muzzle/direction implementation, regression tests, plan, asset record, edit history, and Board screenshots. The final implementation has 112 passing tests and 3 inherited catalog skips, with native/browser builds passing; no gameplay code changed after that validation.
+
+## October 27, 2026 — Straight barrel direction correction
+
+- **Request/evidence:** User reported the preceding origin-only fix was insufficient and supplied `IMG_0918.HEIC`. The photo shows a steep barrel while the displayed angle and dotted guide are shallow (15°). This is direct human evidence that the earlier change did not satisfy the direction requirement.
+- **Change:** One native launch pose now supplies both the measured muzzle position and actual footprint facing to preview and Fire. Initial velocity points along the physical barrel. Removed native relative calibration, deadband, smoothing, and elevation clamping; the angle readout reports actual signed elevation. Re-detection immediately follows a changed physical pose. Browser and AI preserve their existing limits. Gravity and wind bend the later flight normally.
+- **Automated evidence:** `npm test`: 112 passed, 0 failed, 3 inherited catalog skips (115 total). Physics tests cover 13 headings on each side, including shallow, vertical, backward, and downward directions, matching preview/launch motion and power. Native integration inspects all five rendered guide dots and exact age-zero projectile velocity, with a displaced 5° left shot, 30° right shot, and changed 85° pose after pause and a glyph-zero reading. Tracking tests verify immediate direction updates and stable ownership. TypeScript, Vite, native/browser packaging, ZIP integrity, and diff whitespace checks pass.
+- **Board evidence:** Build `ddb169a45a95c862` installed and launched on the paired Board, retaining appId/packageId. `docs/screenshots/board-barrel-direction.png` shows native setup recognizing the right Cannon. New-bundle logs show state ready and audio running, with only the existing optional font-metadata/favicon warnings and no application exception.
+- **Human evidence:** Subsequently confirmed by the user in the acceptance entry above. No new browser interaction check was performed for this correction; the automated browser boot and unchanged browser/AI physics pass.
+
+## October 27, 2026 — Cannon spout alignment
+
+- **Request:** Make the dotted aiming line come out of the Bloogs Cannon spout.
+- **Source evidence:** Native preview and Fire share `shotOrigin()`, now calculated by `frontPoint(pieceFootprint(...), TUNE.ballRadius + 1)`. It uses the real forward outline edge and sensed facing instead of an approximate circle along the calibrated elevation. The 9 px ball has 1 px of edge clearance. Short glyph-zero readings retain the tracker's known Cannon shape. No assets or app identity changed.
+- **Automated evidence:** `npm test`: 110 passed, 0 failed, 3 inherited catalog skips. Extended the existing native integration scenario to inspect actual canvas aim dots and age-zero projectile positions against independently measured catalog mouth geometry. Covers rotated/displaced cannons on both sides, pause contact-ID replacement, and a live glyph-zero reading. `npm run build:web`, ZIP integrity, and diff whitespace checks passed.
+- **Browser evidence:** Opened the packaged browser build, chose two players, started a match, visually checked the dotted guide, and fired. Browser fallback remains operational; it does not verify the physical spout.
+- **Board evidence:** Build `7bf63276d923fc6a` installed and launched on the paired Board. `docs/screenshots/board-spout-alignment.png` confirms the title screen loaded. Logs show platform state ready, no application exception, and the existing optional font-metadata/favicon warnings.
+- **Human evidence:** Real-piece alignment during rotation has not yet been visually confirmed on hardware. That check remains open in the checklist.
+
 ## October 27, 2026 — first playable
 
 - **Asked for:** Notebook Artillery for Board using board-games-ai and its exact Studio starter, with physical Bloogs Cannon pieces.

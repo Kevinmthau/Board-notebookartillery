@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { advance, baseGroundY, beginShot, birdPoses, collision, createMatch, groundY, makeProjectile, resolveImpact, stepBall, TREES, TUNE, type Projectile, type Side, type Terrain } from '../src/artillery';
+import { advance, baseGroundY, beginShot, birdPoses, collision, createMatch, groundY, makeProjectile, preview, resolveImpact, stepBall, TREES, TUNE, type Projectile, type Side, type Terrain } from '../src/artillery';
 function trace(side: Side, wind: number, angle: number, power: number,terrain?:Terrain) {
   const ball=makeProjectile(side,angle,power);
   for(let tick=0;tick<1500;tick++) {
@@ -23,6 +23,35 @@ test('three tower hits produce a lasting result, never an automatic restart', ()
 test('wind changes horizontal travel while gravity changes vertical travel', () => {
   const p: Projectile = { x: 0, y: 0, vx: 500, vy: -500, age: 0, trail: [] };
   stepBall(p, 30, 1); assert.equal(p.x, 515); assert.equal(p.vx, 530); assert.equal(p.y, -280);
+});
+test('physical shots and preview leave the barrel along its actual heading at every orientation', () => {
+  for (const side of [0,1] as const) for (const facingDeg of [0,5,15,45,90,180,225,270,285,300,345,355,359]) {
+    const m=createMatch(4), pose={x:TUNE.towerX[side],y:TUNE.cannonY-100,facingDeg};
+    m.turn=side;m.angle[side]=45;m.wind=20;
+    const dots=preview(m,.30,pose);
+    assert.ok(beginShot(m,45,70,pose));
+    const p=m.projectile!,r=facingDeg*Math.PI/180,dx=Math.cos(r),dy=Math.sin(r);
+    assert.deepEqual(dots[0],{x:p.x,y:p.y});
+    assert.ok(Math.abs(p.vx*dy-p.vy*dx)<1e-9,`side ${side}, heading ${facingDeg}: shot left the barrel sideways`);
+    assert.ok(p.vx*dx+p.vy*dy>0,'shot must leave the front, not the rear');
+    assert.ok(Math.abs(Math.hypot(p.vx,p.vy)-(250+70*6.2))<1e-9,'physical heading must not change power');
+    const dt=.065;
+    assert.ok(Math.abs(dots[1].x-(p.x+p.vx*dt+m.wind*dt*dt/2))<1e-9);
+    assert.ok(Math.abs(dots[1].y-(p.y+p.vy*dt+TUNE.gravity*dt*dt/2))<1e-9);
+    // The displayed elevation must encode the same heading, even outside the browser's 15–80° limits.
+    const displayHeading=(side===0?-m.angle[side]:180+m.angle[side])*Math.PI/180;
+    assert.ok(Math.abs(Math.cos(displayHeading)-dx)<1e-9);
+    assert.ok(Math.abs(Math.sin(displayHeading)-dy)<1e-9);
+  }
+});
+test('browser and AI shots retain the elevation limits without a physical barrel pose', () => {
+  for(const side of [0,1] as const) for(const [input,expected] of [[0,15],[90,80]]) {
+    const m=createMatch(4);m.turn=side;
+    assert.ok(beginShot(m,input,70));assert.equal(m.angle[side],expected);
+  }
+  const m=createMatch(4);
+  assert.equal(beginShot(m,45,70,{x:240,y:600,facingDeg:NaN}),false);
+  assert.equal(m.phase,'aim');assert.equal(m.projectile,null);
 });
 test('the default shot is blocked and flat shots cannot shortcut the battlefield', () => {
   for(const side of [0,1] as const) {

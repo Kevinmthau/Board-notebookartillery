@@ -1,5 +1,7 @@
 export type Side = 0 | 1;
 export type Point = { x: number; y: number };
+/** A physical cannon supplies its actual heading as well as its muzzle position. */
+export type LaunchPose = Point & { facingDeg?: number };
 export const TUNE = { gravity: 440, minAngle: 15, maxAngle: 80, minPower: 20, maxPower: 100,
   towerX: [240, 1680], roofY: 718, baseY: 846, towerHalf: 58, towerScale: .58, cannonY: 678,
   ballRadius: 9, blastRadius: 64, health: 3, step: 1 / 120, settle: 1.1 } as const;
@@ -126,14 +128,28 @@ export function launchPoint(side: Side, angle: number): Point {
   const a = angle * Math.PI / 180, d = side === 0 ? 1 : -1;
   return { x: TUNE.towerX[side] + Math.cos(a) * 112 * d, y: TUNE.cannonY - Math.sin(a) * 112 };
 }
-export function makeProjectile(side: Side, angle: number, power: number, origin?: Point): Projectile {
-  const a = angle * Math.PI / 180, speed = 250 + power * 6.2;
-  return { ...(origin ?? launchPoint(side, angle)), vx: Math.cos(a) * speed * (side === 0 ? 1 : -1),
-    vy: -Math.sin(a) * speed, age: 0, trail: [] };
+/** Signed elevation toward the opponent, without altering the physical barrel direction. */
+export function elevationFromFacing(side: Side, facingDeg: number): number {
+  const angle = side === 0 ? -facingDeg : facingDeg - 180;
+  return ((angle % 360) + 540) % 360 - 180;
 }
-export function beginShot(m: Match, angle = m.angle[m.turn], power = m.power[m.turn], origin?: Point): boolean {
+export function makeProjectile(side: Side, angle: number, power: number, origin?: LaunchPose): Projectile {
+  const a = angle * Math.PI / 180, speed = 250 + power * 6.2;
+  const start = origin ?? launchPoint(side, angle);
+  const p: Projectile = { x: start.x, y: start.y, vx: Math.cos(a) * speed * (side === 0 ? 1 : -1),
+    vy: -Math.sin(a) * speed, age: 0, trail: [] };
+  if (origin?.facingDeg !== undefined) {
+    const heading = origin.facingDeg * Math.PI / 180;
+    p.vx = Math.cos(heading) * speed;
+    p.vy = Math.sin(heading) * speed;
+  }
+  return p;
+}
+export function beginShot(m: Match, angle = m.angle[m.turn], power = m.power[m.turn], origin?: LaunchPose): boolean {
   if (m.phase !== 'aim' || m.winner !== null || !Number.isFinite(angle) || !Number.isFinite(power)) return false;
-  m.angle[m.turn] = clamp(angle, TUNE.minAngle, TUNE.maxAngle);
+  if (origin?.facingDeg !== undefined && !Number.isFinite(origin.facingDeg)) return false;
+  m.angle[m.turn] = origin?.facingDeg === undefined ? clamp(angle, TUNE.minAngle, TUNE.maxAngle)
+    : elevationFromFacing(m.turn, origin.facingDeg);
   m.power[m.turn] = clamp(power, TUNE.minPower, TUNE.maxPower);
   m.projectile = makeProjectile(m.turn, m.angle[m.turn], m.power[m.turn], origin);
   m.shots[m.turn]++; m.phase = 'flight'; m.impact = null; return true;
@@ -219,7 +235,7 @@ export function advance(m: Match, seconds: number) {
   m.elapsed+=remaining;
   if (m.projectile) { m.projectile.trail.push({ x: m.projectile.x, y: m.projectile.y }); if (m.projectile.trail.length > 28) m.projectile.trail.shift(); }
 }
-export function preview(m: Match, seconds = .30, origin?: Point): Point[] {
+export function preview(m: Match, seconds = .30, origin?: LaunchPose): Point[] {
   const p = makeProjectile(m.turn, m.angle[m.turn], m.power[m.turn], origin), points: Point[] = [];
   for (let t = 0; t < seconds; t += .065) { points.push({ x: p.x, y: p.y }); stepBall(p, m.wind, .065); }
   return points;

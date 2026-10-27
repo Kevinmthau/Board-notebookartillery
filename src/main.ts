@@ -3,7 +3,7 @@ import { Board, BoardContactPhase, BoardContactType, BoardPlayerType, type Board
 import { clientToWorld, createSurface, gameAudio, gameFont, loadTitleFont, startInput } from './runtime';
 import { drawTitle } from './title';
 import { Splashes, Particles } from './fx';
-import { loadPieceFootprints, pieceFootprint, type PieceFootprints } from './piece-footprints';
+import { frontPoint, loadPieceFootprints, pieceFootprint, type PieceFootprints } from './piece-footprints';
 import { noteContacts, pickPlayer, registerAiTypes, seated, selectorOpen } from './seats';
 import { advance, beginShot, clamp, createMatch, preview, TUNE, type Match, type Side } from './artillery';
 import { CannonTracker } from './cannons';
@@ -121,20 +121,18 @@ function startMatch() {
   if(continuing&&saved){match=saved.match;impactSerial=match.serial;aiPlan=null;aiDelay=0;lastTurn=-1;continuing=false;saved=undefined;setMode('play');persist();}
   else newMatch();
 }
-function shotOrigin() {
+function shotPose() {
+  if (browser) return;
   const c=cannonFor(match.turn);
-  let origin;
-  if (!browser && c) {
-    // Pose stays physical truth; launch outside this cannon's actual footprint.
-    const p = active.get(c.contactId ?? -1), f=p?pieceFootprint(footprints,p):null;
-    const a=match.angle[match.turn]*Math.PI/180, r=(f?.radiusPx??97)+16;
-    origin={x:c.x+Math.cos(a)*r*(match.turn===0?1:-1),y:c.y-Math.sin(a)*r};
-  }
-  return origin;
+  const p=active.get(c?.contactId??-1);
+  // Position and direction come from the same physical barrel pose.
+  // Keep the tracker's known glyph through a brief glyph-zero reading.
+  const f=c&&p?pieceFootprint(footprints,{...p,glyphId:c.glyphId}):null;
+  return f?{...frontPoint(f,TUNE.ballRadius+1),facingDeg:f.facingDeg}:undefined;
 }
 function shoot() {
   if (!currentHuman() || !hasCannon(match.turn)) return;
-  if (beginShot(match,undefined,undefined,shotOrigin())) { sound('fire');gestures.clear();persist(); }
+  if (beginShot(match,undefined,undefined,shotPose())) { sound('fire');gestures.clear();persist(); }
 }
 function powerBox():Box {return {x:700,y:886,w:660,h:146};}
 function fireBox():Box {return {x:1450,y:888,w:400,h:144};}
@@ -290,7 +288,7 @@ function controls(side:Side){
 }
 function drawShots(){
   if(match.phase==='aim'&&(browser||hasCannon(match.turn))){
-    const dots=preview(match,.30,shotOrigin());ctx.fillStyle=colors[match.turn];
+    const dots=preview(match,.30,shotPose());ctx.fillStyle=colors[match.turn];
     dots.forEach((p,i)=>{ctx.globalAlpha=.8-i*.12;ctx.beginPath();ctx.arc(p.x,p.y,5-i*.5,0,Math.PI*2);ctx.fill();});ctx.globalAlpha=1;
   }
   const p=match.projectile;

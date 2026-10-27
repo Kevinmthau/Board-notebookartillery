@@ -1,5 +1,19 @@
 # Edit history
 
+## October 27, 2026 — Alignment accepted; commit and push
+
+User confirmed the installed fix works: “That works now. commit and push the fix.” Recorded human acceptance of physical spout alignment and prepared the source, regression tests, project records, and Board screenshots for publication to the existing repository.
+
+## October 27, 2026 — Straight out of the barrel
+
+User rejected the previous origin-only change: “Not fixed. the aiming line needs to come straight out of the spout,” with `IMG_0918.HEIC` showing a steeply pointed barrel beside a 15° guide. The previous fix moved the starting point but retained relative angle calibration, so it did not satisfy the request.
+
+Native aim now uses one physical footprint pose for both the muzzle position and initial velocity. Removed the initial 45° calibration, angular deadband, smoothing lag, and native elevation clamp. The displayed angle follows the actual barrel direction, including immediately after pause re-detection. Preview and Fire share the same launch pose; gravity and wind still bend the later path. Browser/AI keep their existing elevation controls. No new gameplay assets.
+
+## October 27, 2026 — Cannon spout alignment
+
+User requested that the dotted aiming line come out of the Bloogs Cannon spout. Replaced the generic radius offset along gameplay elevation with the actual footprint's front edge along the sensed physical facing. Preview and fired ball share this origin, with 10 px of clearance for the 9 px ball. The known Cannon glyph keeps this geometry available during short glyph-zero readings. Relative elevation calibration and browser/AI launch behavior stay unchanged. No new assets.
+
 ## October 27, 2026 — first playable
 
 User asked for Notebook Artillery mechanics on Board using the exact board-games-ai Studio starter and Bloogs Cannon pieces.

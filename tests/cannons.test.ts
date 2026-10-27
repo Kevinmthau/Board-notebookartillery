@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { BoardContactType, BoardContactPhase, type BoardContact } from '@board.fun/web-sdk';
 import { CannonTracker, CANNON_DOCKS } from '../src/cannons';
-import { angleDeltaDeg, type PieceFootprints } from '../src/piece-footprints';
+import type { PieceFootprints } from '../src/piece-footprints';
 import { applyContacts } from '../src/runtime';
 
 const footprints = JSON.parse(readFileSync('public/piece-footprints.json', 'utf8')) as PieceFootprints;
@@ -24,7 +24,7 @@ test('a stationary cannon stays active across empty delta batches and gets one a
   applyContacts(active, []);
   for (let t = 17; t < 2000; t += 17) assert.equal(tracker.update(active, t, footprints).length, 0);
   assert.equal(tracker.identities[0].present, true);
-  assert.equal(tracker.identities[0].angle, 45);
+  assert.equal(tracker.identities[0].angle, 0);
 });
 
 test('two same-glyph cannons are independent and retain ownership when displaced', () => {
@@ -39,33 +39,37 @@ test('two same-glyph cannons are independent and retain ownership when displaced
   assert.equal(left.legal, true);
 });
 
-test('rotation uses configured facing, suppresses resting jitter, and mirrors the seats', () => {
-  const tracker = new CannonTracker(); rest(tracker, [contact(1, 0, 359), contact(2, 1, 180)]);
+test('rotation immediately follows the physical barrel on both sides without an offset or angle clamp', () => {
+  const tracker = new CannonTracker(); tracker.update(map(contact(1, 0, 359), contact(2, 1, 181)), 0, footprints);
   const [left, right] = tracker.identities;
   assert.equal(left.facingDeg, 359);
-  for (let i = 0; i < 30; i++) tracker.update(map(contact(1, 0, (359 + (i % 2 ? 2 : -2) + 360) % 360), contact(2, 1, 180)), 300 + i * 17, footprints);
-  assert.equal(left.angle, 45);
-  rest(tracker, [contact(1, 0, 329), contact(2, 1, 210)], 1000, 50);
-  assert.ok(left.angle > 70 && left.angle < 72); assert.ok(right.angle > 70 && right.angle < 72);
-  assert.ok(Math.abs(angleDeltaDeg(left.zeroFacingDeg, 359)) < 1e-9);
+  assert.equal(left.angle, 1); assert.equal(right.angle, 1);
+  const cases = [[0, 180, 0], [355, 185, 5], [345, 195, 15], [280, 260, 80],
+    [275, 265, 85], [270, 270, 90], [250, 290, 110], [180, 0, -180], [90, 90, -90]];
+  for (const [i, [leftFacing, rightFacing, expected]] of cases.entries()) {
+    tracker.update(map(contact(1, 0, leftFacing), contact(2, 1, rightFacing)), 17 + i * 17, footprints);
+    assert.equal(left.angle, expected, `left facing ${leftFacing}`);
+    assert.equal(right.angle, expected, `right facing ${rightFacing}`);
+  }
 });
 
-test('initial zero is a circular mean rather than an average through 180 degrees', () => {
+test('crossing the facing wrap keeps the signed elevation without resting-pose calibration', () => {
   const tracker = new CannonTracker();
-  for (let i = 0; i < 12; i++) tracker.update(map(contact(1, 0, i % 2 ? 1 : 359)), i * 17, footprints);
-  assert.ok(Math.abs(angleDeltaDeg(tracker.identities[0].zeroFacingDeg, 0)) < .01);
-  assert.equal(tracker.identities[0].angle, 45);
+  for (let i = 0; i < 12; i++) {
+    tracker.update(map(contact(1, 0, i % 2 ? 1 : 359)), i * 17, footprints);
+    assert.equal(tracker.identities[0].angle, i % 2 ? -1 : 1);
+  }
 });
 
-test('lift removes presence immediately; nearby timely return keeps identity, angle and zero', () => {
+test('lift removes presence immediately; nearby timely return keeps identity and physical angle', () => {
   const tracker = new CannonTracker(); rest(tracker, [contact(1)]);
   rest(tracker, [contact(1, 0, 330)], 300, 40);
-  const identity = tracker.identities[0], angle = identity.angle, zero = identity.zeroFacingDeg;
+  const identity = tracker.identities[0], angle = identity.angle;
   tracker.update(new Map(), 1000, footprints);
   assert.equal(identity.present, false); assert.equal(identity.legal, false); assert.equal(identity.contactId, null);
   const arrivals = tracker.update(map(contact(8, 0, 330, { x: CANNON_DOCKS[0].x+50, phase: BoardContactPhase.Began })), 1200, footprints);
   assert.equal(arrivals.length, 0); assert.equal(identity.contactId, 8); assert.equal(identity.present, true);
-  assert.equal(identity.angle, angle); assert.equal(identity.zeroFacingDeg, zero); assert.equal(tracker.identities.length, 1);
+  assert.equal(identity.angle, angle); assert.equal(tracker.identities.length, 1);
 });
 
 test('far and late returns are real placements, even if a host reuses a contact number', () => {
@@ -77,10 +81,10 @@ test('far and late returns are real placements, even if a host reuses a contact 
   assert.equal(tracker.identities.length, 3);
 });
 
-test('three pause epochs preserve cannon state despite swapped contact ids and long pauses', () => {
+test('three pause epochs preserve identities and immediately read changed barrel poses after long pauses', () => {
   const tracker = new CannonTracker(); rest(tracker, [contact(1), contact(2, 1, 180)]);
   rest(tracker, [contact(1, 0, 330), contact(2, 1, 205)], 300, 40);
-  const [left, right] = tracker.identities, leftAngle = left.angle, rightAngle = right.angle;
+  const [left, right] = tracker.identities;
   for (let cycle = 1; cycle <= 3; cycle++) {
     const t = cycle * 10000;
     tracker.paused(t);
@@ -88,12 +92,13 @@ test('three pause epochs preserve cannon state despite swapped contact ids and l
     assert.deepEqual(tracker.update(map(contact(1)), t + 1, footprints), []);
     tracker.resumed(t + 5000);
     assert.equal(tracker.update(new Map(), t + 5010, footprints).length, 0);
-    assert.equal(tracker.update(map(contact(2, 0, 330), contact(1, 1, 205)), t + 5100, footprints).length, 0);
+    const leftFacing = 330 - cycle * 10, rightFacing = 205 + cycle * 10;
+    assert.equal(tracker.update(map(contact(2, 0, leftFacing), contact(1, 1, rightFacing)), t + 5100, footprints).length, 0);
     assert.equal(left.contactId, 2); assert.equal(right.contactId, 1);
     assert.equal(left.side, 0); assert.equal(right.side, 1);
-    assert.equal(left.angle, leftAngle); assert.equal(right.angle, rightAngle);
-    rest(tracker, [contact(2, 0, 331), contact(1, 1, 204)], t + 5200, 20);
-    assert.equal(left.angle, leftAngle); assert.equal(right.angle, rightAngle);
+    assert.equal(left.angle, 30 + cycle * 10); assert.equal(right.angle, 25 + cycle * 10);
+    tracker.update(map(contact(2, 0, leftFacing + 1), contact(1, 1, rightFacing - 1)), t + 5200, footprints);
+    assert.equal(left.angle, 29 + cycle * 10); assert.equal(right.angle, 24 + cycle * 10);
   }
   assert.equal(tracker.identities.length, 2);
 });
@@ -115,7 +120,7 @@ test('brief glyph-zero flap preserves identity without allowing unknown pieces t
   const tracker = new CannonTracker(); tracker.update(map(contact(1)), 0, footprints);
   const identity = tracker.identities[0];
   assert.equal(tracker.update(map(contact(1, 0, 90, { glyphId: 0 })), 200, footprints).length, 0);
-  assert.equal(identity.present, true); assert.equal(identity.angle, 45);
+  assert.equal(identity.present, true); assert.equal(identity.angle, -90);
   tracker.update(map(contact(1, 0, 90, { glyphId: 0 })), 300, footprints);
   assert.equal(identity.present, false);
   assert.equal(tracker.update(map(contact(1)), 350, footprints).length, 0);
@@ -142,13 +147,14 @@ test('pause matches by nearest pose, and a far or expired return gets a new arri
   assert.equal(tracker.identities.length, 4);
 });
 
-test('a deliberate turn after redetection re-arms aim without recalibrating the zero', () => {
+test('a changed pose on redetection updates aim immediately without a further turn', () => {
   const tracker = new CannonTracker(); rest(tracker, [contact(1)]);
   rest(tracker, [contact(1, 0, 330)], 300, 40);
-  const identity = tracker.identities[0], oldAngle = identity.angle, zero = identity.zeroFacingDeg;
+  const identity = tracker.identities[0];
+  assert.equal(identity.angle, 30);
   tracker.update(new Map(), 1000, footprints);
-  tracker.update(map(contact(2, 0, 330)), 1100, footprints);
-  rest(tracker, [contact(2, 0, 350)], 1200, 40);
-  assert.ok(identity.angle < oldAngle - 10);
-  assert.equal(identity.zeroFacingDeg, zero);
+  assert.equal(tracker.update(map(contact(2, 0, 350)), 1100, footprints).length, 0);
+  assert.equal(identity.contactId, 2); assert.equal(identity.angle, 10);
+  tracker.update(map(contact(2, 0, 349)), 1117, footprints);
+  assert.equal(identity.angle, 11);
 });

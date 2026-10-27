@@ -24,9 +24,10 @@
 - Two smaller towers face each other across a wide colorful valley with freshly generated hills and solid foreground trees each match. Players alternate one shot at a time.
 - Each tower starts with three health points. Hits crack the facade; its platform stays fixed until final collapse.
 - A miss changes no tower health. Hills, tree trunks, and tree crowns block shots; distant pale trees are scenery. A terrain hit carves a lasting crater. A tree hit knocks it down; digging away its roots also brings it down. Later shots and Pip use the changed terrain. No timer rushes a human turn.
-- Angle is between 15 and 80 degrees. The first resting cannon direction represents 45 degrees. Power is between 20 and 100 percent.
+- On Board, shot direction follows the physical Cannon barrel immediately, with no initial-pose calibration or angle clamp. The angle readout reports its actual elevation toward the other tower. Browser controls and AI keep their 15–80 degree elevation range. Power is between 20 and 100 percent.
 - Gravity and wind affect every shot. Wind changes between turns and is visible before firing.
 - A short 0.30-second dotted arc shows the launch direction, not the landing location. The smaller target and taller obstacles require a more precise lob.
+- On Board, the arc and cannonball start just beyond the real Cannon spout and launch straight along the barrel, using the same measured footprint and sensed facing for both position and direction. Gravity and wind then bend the trajectory. Shallow, vertical, backward, or downward physical orientations are not remapped to a different direction.
 - All tuning values live together. Both players and AI use the same trajectory and hit rules.
 - Every new game and rematch generates a new valley: hill position, height, and width, plus tree positions and sizes vary. The same saved match retains its exact layout and damage.
 - Small groups of birds occasionally cross the valley. A bird can block either player’s shot, chirps, and flies away; the turn ends without tower damage. Watch for a gap before firing. Birds use the match clock and freeze during pause/help.
@@ -35,7 +36,7 @@
 - Placement binds ownership and acknowledges the cannon. Placement never fires.
 - Rotation sets elevation. Moving a piece does not move its tower or dodge a shot.
 - Lifting a cannon blocks that player's next shot until it returns. It does not erase health or ownership.
-- Tracking gaps and pause redetection preserve ownership, aim calibration, and health. They never fire or repeat a placement effect.
+- Tracking gaps and pause redetection preserve ownership and health. Re-detection immediately uses the current physical barrel direction, including turns made while paused. They never fire or repeat a placement effect.
 - No digital cannon appears in play, including the AI side. The real piece supplies the cannon.
 - Browser play shows the towers and trajectory only. Drag from a tower or use angle controls, set power, then fire.
 - Real piece renders identify equipment in help only. Setup keeps the actual tower platforms visible. No cannon render follows a physical piece.
@@ -124,7 +125,8 @@
 | Obstacle durability | Destructible hills and trees | person | Preference answer, October 27 | Persistent craters, felled trees, and AI reacting to changed terrain |
 | Replay variation | Different hills and trees every game | person | Follow-up request, October 27 | Seeded per-match geometry; fixed physical cannon platforms |
 | Moving obstacles | Occasional passing birds | person | Follow-up request, October 27 | Both players and Pip can be blocked; bird flies away |
-| Aim | Relative rotation from initial resting pose | builder | Avoid absolute-facing confusion | Keep zero through blinks and pause |
+| Aim | Absolute physical barrel direction | person | Photo and “straight out of the spout” correction, October 27 | Supersedes builder's relative 45° calibration; no smoothing lag, deadband, or native 15–80° clamp |
+| Aim guide origin | Actual physical Cannon spout | person | Spout-alignment correction, October 27 | Use the footprint's forward edge plus ball clearance and its actual facing for both preview and shot |
 | Recipe | Aim Blast, adapted to deliberate turn-based fire | builder | Genre recipes | No automatic shots |
 | Publishing | Public GitHub repository at `Kevinmthau/Board-notebookartillery` | person | Commit and push request, October 27 | Preserve existing history, vendored SDK, lockfile, and app identity; `main` is the public default branch |
 
