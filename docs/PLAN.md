@@ -37,6 +37,7 @@
 - Rotation sets elevation. Moving a piece does not move its tower or dodge a shot.
 - Lifting a cannon blocks that player's next shot until it returns. It does not erase health or ownership.
 - Tracking gaps and pause redetection preserve ownership and health. Re-detection immediately uses the current physical barrel direction, including turns made while paused. They never fire or repeat a placement effect.
+- Both human cannons track rotation independently while resting on their towers. At each turn handoff, the new active cannon supplies the angle and guide; only Fire beneath that tower accepts a shot.
 - A resting piece remains eligible for pause recovery through delayed detection and repeated menu openings; a genuine observed lift still uses the normal short tracking-gap window. Pause cancels the pending display callback so resume maintains one render loop.
 - No digital cannon appears in play, including the AI side. The real piece supplies the cannon.
 - Browser play shows the towers and trajectory only. Drag from a tower or use angle controls, set power, then fire.
@@ -152,3 +153,4 @@
 - `npm test`
 - `npm run pack`
 - Board installation is a later device step: `board-connect install <package>.webapp.zip --launch`.
+- When installing, target this project's permanent appId `44a14729-e058-41c3-9812-588229c563e6`. The October 27 player-2 investigation found a second installed app also named Bloog Barrage (`83c56145-abcc-5db7-8fb5-63e71b5c52c9`); its contents and which copy was used for the reported failure are unverified. Launch the project's app explicitly for hardware validation.

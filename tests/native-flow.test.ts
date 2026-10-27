@@ -18,6 +18,7 @@ let contactSink: ((batch: readonly BoardContact[]) => void) | null = null;
 const pauses: (() => void)[] = [], resumes: (() => void)[] = [];
 const errors: unknown[] = [];
 const draws: string[] = [];
+const textDraws: { text: string; x: number; y: number }[] = [];
 const arcs: { x: number; y: number; radius: number; fill: unknown; alpha: unknown }[] = [];
 const listeners = new Map<string, ((e: unknown) => void)[]>();
 const listen = (type: string, callback: (e: unknown) => void) => listeners.set(type, [...(listeners.get(type) ?? []), callback]);
@@ -26,7 +27,10 @@ const context = () => new Proxy({} as Record<string, unknown>, {
     if (key in state) return state[key as string];
     if (key === 'canvas') return { width: 1920, height: 1080 };
     return (...args: unknown[]) => {
-      if (key === 'fillText') draws.push(String(args[0]));
+      if (key === 'fillText') {
+        draws.push(String(args[0]));
+        textDraws.push({ text: String(args[0]), x: Number(args[1]), y: Number(args[2]) });
+      }
       if (key === 'arc') arcs.push({ x: Number(args[0]), y: Number(args[1]), radius: Number(args[2]), fill: state.fillStyle, alpha: state.globalAlpha });
       if (key === 'measureText') {
         const width = String(args[0]).length * .55 * (parseFloat(String(state.font)) || 32);
@@ -102,7 +106,7 @@ function run(seconds: number) {
     const pending = [...frames];
     for (const [id, callback] of pending) {
       if (!frames.delete(id)) continue;
-      draws.length = 0; arcs.length = 0; callback(now);
+      draws.length = 0; textDraws.length = 0; arcs.length = 0; callback(now);
     }
   }
 }
@@ -122,6 +126,18 @@ function tap(x: number, y: number, id = 99) {
 function fire(side: Side, id = 100) {
   assert.equal(saved!.match.turn, side);
   tap(TUNE.towerX[side], 960, id);
+}
+function assertTurnControls(side: Side) {
+  assert.equal(saved!.match.turn, side);
+  const buttons = textDraws.filter(draw => draw.text === 'FIRE!');
+  assert.equal(buttons.length, 1, 'the active player needs one Fire button');
+  assert.equal(buttons[0].x, TUNE.towerX[side], 'Fire must be centered below the active tower');
+  assert.ok(buttons[0].y > TUNE.cannonY, 'Fire must be below the cannon');
+  const shots = totalShots();
+  tap(TUNE.towerX[side === 0 ? 1 : 0], buttons[0].y, 502);
+  assert.equal(totalShots(), shots, 'the inactive tower retained a Fire hit target');
+  assert.equal(saved!.match.phase, 'aim');
+  assert.equal(saved!.match.turn, side);
 }
 // The catalog's mouth edge runs from (-4.51, 26.58) to (4.79, 26.49) mm.
 // Interpolate its intersection with the barrel centerline independently of frontPoint().
@@ -216,6 +232,7 @@ test('native landscape setup starts two-player and solo matches, with deliberate
   assert.equal(saved.match.phase, 'aim'); assert.deepEqual(saved.match.shots, [0, 0]);
   assert.deepEqual(saved.sides, [{sessionId:1,side:1},{sessionId:2,side:0}]);
   assertPreviewAtMuzzle(0, piece(1, 0, 0));
+  assertTurnControls(0);
 
   // Input can change between display frames. Fire must use this batch's cannon state,
   // even when the finger event comes before the lift/move in that same batch.
@@ -247,6 +264,17 @@ test('native landscape setup starts two-player and solo matches, with deliberate
   assert.equal(totalShots(), 0, 'setting power fired accidentally');
   fireFromMuzzle(0, leftPose); assert.equal(saved.match.shots[0], 1); run(8);
   assert.equal(saved.match.turn, 1); assert.equal(saved.match.phase, 'aim');
+  assertTurnControls(1);
+
+  // The second turn must read the right cannon's existing contact without a lift or rebind.
+  // Send only its rotation events: the resting left cannon remains in the active snapshot.
+  for (const [facing, elevation] of [[180, 0], [195, 15], [210, 30], [260, 80], [270, 90], [90, -90]]) {
+    const pose = piece(2, 1, facing); emit(pose); run(.05);
+    assertPreviewAtMuzzle(1, pose);
+    assert.ok(draws.includes(`${elevation}°`), `right cannon facing ${facing} did not update the angle display`);
+    assert.equal(saved.match.angle[0], 5, 'right cannon rotation changed the left player\'s aim');
+    assert.equal(totalShots(), 1, 'right cannon rotation fired accidentally');
+  }
 
   // A true long lift creates a new physical identity; the player's seat must rebind to it.
   emit(piece(2, 1, 180, BoardContactPhase.Ended)); run(1.3);
@@ -255,6 +283,7 @@ test('native landscape setup starts two-player and solo matches, with deliberate
   emit(rightPose); run(.5);
   fireFromMuzzle(1, rightPose); assert.equal(saved.match.shots[1], 1, 'new contact after a real lift did not rebind the native seat'); run(8);
   assert.equal(saved.match.turn, 0); assert.equal(saved.match.phase, 'aim');
+  assertTurnControls(0);
 
   // Help freezes match time. Reopening it from the menu must keep a path back to play.
   assert.ok(menu); const beforeHelpClock=saved.match.elapsed;

@@ -1,5 +1,25 @@
 # Acceptance ledger: Bloog Barrage
 
+## October 27, 2026 — Commit and push the accepted two-turn checks
+
+- **Request:** Commit and push the changes after the user confirmed both turns work on Board.
+- **Handover:** Publish the focused native integration regressions, updated plan/checklist/asset records, human acceptance, and title-screen installation evidence to `codex/bloog-barrage`. Validation remains 117 passing tests, 3 inherited skips, successful native/browser builds, and the installed clean build `c607118b44364d1f`. No gameplay or test code changed after validation; the final diff contains no temporary diagnostics.
+
+## October 27, 2026 — Both turns confirmed on Board
+
+- **Human evidence:** After initially responding that player 2 still failed, the user subsequently confirmed “it works now” and “Both turns worked this time” in response to checks of aiming and Fire handoff on the physical Board. This closes the reported two-turn check, not the separate full-match, reach, or pause-alignment checks.
+- **Diagnostic evidence:** The captured screen during investigation showed the left player still active. A temporary logging build (`ea19489d8219cd79`) reported both real cannon contacts present and legal, with independently sensed headings. The logs did not capture a failing right-side turn, so no specific new code defect or root cause is claimed. Temporary logging changed no gameplay and was removed after confirmation.
+- **Handover:** Rebuilt, installed, and launched the clean `c607118b44364d1f` package with identical gameplay. Kept the added integration regressions (117 passing tests, 3 inherited skips); no production source changes remain from this investigation.
+
+## October 27, 2026 — Player 2 aiming and turn controls investigation
+
+- **Request:** Player 2's cannon does not aim on the physical Board, and Fire should switch beneath the active player's tower.
+- **Source evidence:** Current source already updates both cannons' physical poses independently and shares the active tower's Fire bounds between drawing and input. No new production-code defect was reproduced. The preceding review's input and pause fixes had not been installed in that review.
+- **Automated evidence:** Extended `tests/native-flow.test.ts` to rotate the continuously tracked right cannon through elevations 0°, 15°, 30°, 80°, 90°, and −90°, verifying the visible angle and every preview sample while the left cannon remains resting. Verified one Fire beneath the active tower and rejection of inactive-side taps across left–right–left handoffs. Existing shot-velocity, replacement-contact, and pause tests remain intact. `npm test`: 117 passed, 0 failed, 3 inherited catalog skips. `npm run build:web` and `git diff --check` pass.
+- **Board evidence:** Device listing contains two apps named Bloog Barrage: this project's `44a14729-e058-41c3-9812-588229c563e6` and `83c56145-abcc-5db7-8fb5-63e71b5c52c9`. This establishes ambiguity, not that the other app caused the report. Rebuilt and installed platform build `c607118b44364d1f`, explicitly launching the permanent project app ID. Screenshot `docs/screenshots/board-player-two-current-build.png` shows its title screen; logs show platform state ready, with only existing optional font metadata/favicon warnings. The other installation was left intact.
+- **Browser evidence:** No new interactive browser check; packaged browser build and automated boot pass. Existing interactive evidence remains recorded below.
+- **Human evidence:** Requested a check of player-2 rotation and Fire handoff in the explicitly launched build. The initial reply reported continued failure; the later confirmation is recorded above. Title-screen installation evidence alone does not establish physical aiming success.
+
 ## October 27, 2026 — Code review fixes
 
 - **Request:** Review the game, fix findings until clear, then commit and push.

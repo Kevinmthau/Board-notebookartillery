@@ -1,5 +1,19 @@
 # Edit history
 
+## October 27, 2026 — Commit and push the two-turn checks
+
+User requested: “Commit and push the changes.” Publish the player-2 aiming and active-side Fire integration regressions, hardware acceptance records, and installation screenshot to the existing `codex/bloog-barrage` branch. The clean gameplay build is already installed; no temporary diagnostics remain.
+
+## October 27, 2026 — Both turns accepted
+
+User initially reported continued player-2 failure after installation, then confirmed “it works now” and “Both turns worked this time” during the follow-up investigation. Inspected the current Board screenshot and installed a temporary input-logging build to separate turn handoff from sensing. Both cannon contacts were present and legal; no failing right-side turn was captured. Removed the temporary logging and retained the original gameplay, targeted regression coverage, and the user's hardware confirmation. No new gameplay fix is claimed.
+
+## October 27, 2026 — Player 2 aiming and turn controls on Board
+
+User reported: “The canon aiming is not responding for player 2. And the Fire button needs to change sides each turn to be under the persons tower,” and confirmed this occurs on the physical Board.
+
+The current source already tracks both physical cannons and draws/hit-tests Fire beneath the active tower. The latest input and pause-recovery fixes from the preceding review had no recorded device installation. Device inspection found two different installed app IDs with the same Bloog Barrage name; it did not establish which copy produced the symptoms. Rebuilt, installed, and explicitly launched this project's permanent app ID without changing or removing the other installation. No speculative gameplay change was made. Extended native integration coverage for continuous player-2 rotation, per-turn Fire drawing, and rejection of the inactive tower's Fire position. Later physical confirmation is recorded above.
+
 ## October 27, 2026 — Code review and fixes
 
 User requested: “do a code review of this game. Fix any findings until all clear the commit and push.” Reviewed gameplay/AI, Board contact tracking, roster/save/pause lifecycle, rendering, browser selection, and packaging, then independently reviewed the fixes.

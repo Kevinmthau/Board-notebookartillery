@@ -18,3 +18,5 @@ No Notebook Artillery artwork or audio is copied. No generated cannon or cannon 
 The native package omits the browser simulator. The standalone web build adds the supplied Studio simulator and this project's player-selector adapter.
 
 October 27 code review: the player-selector adapter now receives pointer input, and the original HUD uses larger in-play labels. No gameplay assets or licences changed. `docs/screenshots/review-selector-pip-browser.png` and `docs/screenshots/review-hud-browser.png` are locally captured review evidence and are not shipped in either game bundle.
+
+October 27 player-2 investigation: no shipped files or asset licences changed. `docs/screenshots/board-player-two-current-build.png` is a local Board screenshot of the explicitly launched current package's title screen, retained as installation evidence and excluded from the game bundles.
