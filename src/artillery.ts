@@ -161,7 +161,10 @@ export function stepBall(p: Projectile, wind: number, dt: number) {
 }
 export function collision(p: Projectile, terrain?: Terrain,birds:readonly BirdPose[]=[]): Omit<Impact, 'serial'> | null {
   for (const side of [0, 1] as const) {
-    if (p.age > .13 && Math.abs(p.x - TUNE.towerX[side]) <= TUNE.towerHalf + TUNE.ballRadius && p.y >= TUNE.roofY - TUNE.ballRadius && p.y <= TUNE.baseY)
+    // Native barrels may point down into their own tower. Launching outside the
+    // physical piece is enough clearance; a time-based immunity would let those
+    // shells pass through visible masonry before tower collisions become active.
+    if (Math.abs(p.x - TUNE.towerX[side]) <= TUNE.towerHalf + TUNE.ballRadius && p.y >= TUNE.roofY - TUNE.ballRadius && p.y <= TUNE.baseY)
       return { x: p.x, y: p.y, kind: 'hit', target: side };
   }
   if (p.x < -100 || p.x > 2020 || p.age > 12) return { x: clamp(p.x, 0, 1920), y: clamp(p.y, 0, 1080), kind: 'miss', target: null };

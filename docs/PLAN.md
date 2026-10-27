@@ -37,10 +37,13 @@
 - Rotation sets elevation. Moving a piece does not move its tower or dodge a shot.
 - Lifting a cannon blocks that player's next shot until it returns. It does not erase health or ownership.
 - Tracking gaps and pause redetection preserve ownership and health. Re-detection immediately uses the current physical barrel direction, including turns made while paused. They never fire or repeat a placement effect.
+- A resting piece remains eligible for pause recovery through delayed detection and repeated menu openings; a genuine observed lift still uses the normal short tracking-gap window. Pause cancels the pending display callback so resume maintains one render loop.
 - No digital cannon appears in play, including the AI side. The real piece supplies the cannon.
 - Browser play shows the towers and trajectory only. Drag from a tower or use angle controls, set power, then fire.
 - Real piece renders identify equipment in help only. Setup keeps the actual tower platforms visible. No cannon render follows a physical piece.
 - Fire is a separate deliberate finger action. A shot already in flight completes before another begins.
+- Fire checks the current contact batch before acting: a lift, invalid pose, wrong glyph, or move away from the tower immediately blocks the shot, even before the next display frame.
+- Tower collisions apply from launch, including a downward physical shot into the shooting player's own tower.
 - Hit feedback: a quick squash, colored burst, falling masonry, sound, and one clear health change. Miss feedback identifies whether the shot struck a hillside or treetop.
 - Terrain damage persists through turns, pause, and same-build saves. Rematch creates a different layout of fresh hills and trees. Physical tower platforms stay fixed and their immediate ground is protected so real cannons do not need repositioning after a blast.
 - Victory: the tower falls and a short celebration leads to a shared result choice.
@@ -60,6 +63,7 @@
 - Start Game becomes available after two distinct roster seats are bound and required human cannons are present at their matching towers. A deliberate tap starts the match; selection and placement never start it automatically.
 - A human's first intentional shot starts the duel. No countdown or placement triggers a shot.
 - Preserve seats and real pieces for rematches. Change setup releases bindings.
+- A roster change that leaves either tower unassigned returns play, results, or their help screen to setup for explicit confirmation. Rematch requires two assigned roster players.
 
 ## Communication and teaching
 
@@ -89,6 +93,7 @@
 
 - Winner is the player whose tower remains. Result shows the winner and hit totals.
 - One shared choice: Rematch or Change setup. No timer restarts play.
+- A saved match arriving while title-screen help is open remains available through Continue when help closes.
 - Rematch resets health, wind, shots, projectile, bird crossings, and effects, and generates new hills and trees. It preserves players and resting cannon identities.
 - Change setup releases seats and opens setup without changing the OS roster silently.
 
@@ -130,6 +135,7 @@
 | Aim guide origin | Actual physical Cannon spout | person | Spout-alignment correction, October 27 | Use the footprint's forward edge plus ball clearance and its actual facing for both preview and shot |
 | Recipe | Aim Blast, adapted to deliberate turn-based fire | builder | Genre recipes | No automatic shots |
 | Publishing | Public GitHub repository at `Kevinmthau/Board-notebookartillery` | person | Commit and push request, October 27 | Preserve existing history, vendored SDK, lockfile, and app identity; `main` is the public default branch |
+| In-play label floor | Wind, turn, angle, power, and browser aim hint use at least 48 px | builder | Code review, October 27 | Corrects the previous 32 px helper calls, which conflicted with the Board floor; the offscreen-shot arrow also stays inside the 48 px safe inset |
 
 ## Build steps
 

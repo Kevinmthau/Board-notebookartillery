@@ -11,7 +11,9 @@
   const choose = replaceId => {
     const id = requestId++;
     const root = document.createElement('div'); root.dataset.boardSim = 'selector';
-    Object.assign(root.style, { position:'fixed', inset:'0', background:'rgba(20,44,63,.55)', display:'grid', placeItems:'center', zIndex:'2147483647', color:'#183e4b', fontFamily:'system-ui,sans-serif' });
+    // The host's shared [data-board-sim] rule disables pointer events for its HUD.
+    // This modal must receive them so its choices work and clicks cannot reach the game.
+    Object.assign(root.style, { position:'fixed', inset:'0', background:'rgba(20,44,63,.55)', display:'grid', placeItems:'center', pointerEvents:'auto', zIndex:'2147483647', color:'#183e4b', fontFamily:'system-ui,sans-serif' });
     const card = document.createElement('section');
     Object.assign(card.style, { background:'#fffced', borderRadius:'28px', padding:'36px', width:'min(450px,80vw)', boxShadow:'0 18px 60px #1235' });
     const title = document.createElement('h2'); title.textContent = 'Choose your opponent'; title.style.margin = '0 0 10px';

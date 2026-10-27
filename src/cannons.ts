@@ -6,7 +6,7 @@ export type CannonSide = 0 | 1;
 export const CANNON_GLYPH = 2;
 export const CANNON_DOCKS = [{ x: TUNE.towerX[0], y: TUNE.cannonY }, { x: TUNE.towerX[1], y: TUNE.cannonY }] as const;
 export const CANNON_TRACKING = {
-  legalRadius: 110, rebindRadius: 140, rebindMs: 900, resumeMs: 2000,
+  legalRadius: 110, rebindRadius: 140, rebindMs: 900,
   glyphFlapMs: 250,
 } as const;
 
@@ -34,8 +34,9 @@ export function cannonSideAt(x: number, y: number): CannonSide | null {
   return null;
 }
 const alive = (c: BoardContact) => c.phase !== BoardContactPhase.Ended && c.phase !== BoardContactPhase.Canceled;
+const validPose = (c: BoardContact) => Number.isFinite(c.x) && Number.isFinite(c.y) && Number.isFinite(c.orientation);
 const cannon = (c: BoardContact) => c.type === BoardContactType.Glyph && c.glyphId === CANNON_GLYPH && alive(c)
-  && Number.isFinite(c.x) && Number.isFinite(c.y) && Number.isFinite(c.orientation);
+  && validPose(c);
 
 /**
  * Consume the maintained active map from startInput, not a raw event batch.
@@ -47,31 +48,28 @@ export class CannonTracker {
   private memory = new Map<number, Memory>();
   private nextId = 1;
   private isPaused = false;
-  private resumeUntil = -Infinity;
 
   clear(): void {
     this.identities.length = 0;
     this.memory.clear();
-    this.resumeUntil = -Infinity;
     this.isPaused = false;
   }
 
   paused(_now: number): void {
     this.isPaused = true;
-    this.resumeUntil = -Infinity;
     for (const identity of this.identities) {
       const m = this.memory.get(identity.id)!;
-      // Only identities on the table at this boundary qualify for time-independent recovery.
-      m.pauseCandidate = identity.present;
+      // An unobserved piece may still be resting on the glass even if detection is slow or
+      // another menu opens before it returns. Only an actual observation ends this recovery.
+      m.pauseCandidate ||= identity.present;
       identity.contactId = null;
       identity.present = false;
       identity.legal = false;
     }
   }
 
-  resumed(now: number): void {
+  resumed(_now: number): void {
     this.isPaused = false;
-    this.resumeUntil = now + CANNON_TRACKING.resumeMs;
   }
 
   update(active: ReadonlyMap<number, BoardContact>, now: number, footprints: PieceFootprints | null): CannonIdentity[] {
@@ -84,7 +82,7 @@ export class CannonTracker {
       const m = this.memory.get(identity.id)!;
       const c = identity.contactId === null ? undefined : active.get(identity.contactId);
       const glyphFlap = c && alive(c) && c.type === BoardContactType.Glyph && c.glyphId === 0
-        && now - m.lastValidGlyph <= CANNON_TRACKING.glyphFlapMs;
+        && validPose(c) && now - m.lastValidGlyph <= CANNON_TRACKING.glyphFlapMs;
       if (c && (cannon(c) || glyphFlap)) {
         claimed.add(c.contactId);
         this.observe(identity, glyphFlap ? { ...c, glyphId: CANNON_GLYPH } : c, now, footprints, Boolean(glyphFlap));
@@ -93,7 +91,6 @@ export class CannonTracker {
         identity.present = false;
         identity.legal = false;
       }
-      if (now > this.resumeUntil) m.pauseCandidate = false;
     }
 
     const contacts = [...active.values()].filter(c => cannon(c) && !claimed.has(c.contactId));
@@ -102,7 +99,7 @@ export class CannonTracker {
       const m = this.memory.get(identity.id)!;
       const close = distance(identity, c) <= CANNON_TRACKING.rebindRadius;
       const timely = now - identity.lastSeen <= CANNON_TRACKING.rebindMs;
-      const pausedMatch = m.pauseCandidate && now <= this.resumeUntil;
+      const pausedMatch = m.pauseCandidate;
       return !identity.present && close && (timely || pausedMatch)
         ? [{ c, identity, gap: distance(identity, c) }] : [];
     })).sort((a, b) => a.gap - b.gap || a.identity.id - b.identity.id);

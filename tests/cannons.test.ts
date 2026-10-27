@@ -127,6 +127,19 @@ test('brief glyph-zero flap preserves identity without allowing unknown pieces t
   assert.equal(identity.present, true);
 });
 
+test('an invalid glyph-zero pose cannot corrupt the retained cannon position or angle', () => {
+  for (const pose of [{ x: NaN }, { y: Infinity }, { orientation: NaN }]) {
+    const tracker = new CannonTracker(); tracker.update(map(contact(1, 0, 330)), 0, footprints);
+    const identity = tracker.identities[0];
+    tracker.update(map(contact(1, 0, 330, { glyphId: 0, ...pose })), 100, footprints);
+    assert.equal(identity.present, false); assert.equal(identity.legal, false);
+    assert.equal(identity.x, CANNON_DOCKS[0].x); assert.equal(identity.y, CANNON_DOCKS[0].y);
+    assert.equal(identity.angle, 30);
+    assert.equal(tracker.update(map(contact(8, 0, 330)), 200, footprints).length, 0);
+    assert.equal(identity.present, true); assert.equal(identity.contactId, 8);
+  }
+});
+
 test('loading piece data does not guess orientation or consume the first arrival', () => {
   const tracker = new CannonTracker();
   assert.deepEqual(tracker.update(map(contact(1)), 0, null), []);
@@ -139,12 +152,35 @@ test('Ended and Canceled cannot count as present even when included by a caller'
   assert.ok(tracker.identities.every(identity => !identity.present && !identity.legal && identity.contactId === null));
 });
 
-test('pause matches by nearest pose, and a far or expired return gets a new arrival', () => {
+test('pause matches by nearest pose after delayed detection, while a far return gets a new arrival', () => {
   const tracker = new CannonTracker(); tracker.update(map(contact(1), contact(2, 1, 180)), 0, footprints);
+  const [left, right] = tracker.identities;
   tracker.paused(100); tracker.resumed(20000);
   assert.equal(tracker.update(map(contact(9, 0, 0, { x: 800 })), 20100, footprints).length, 1);
-  assert.equal(tracker.update(map(contact(9, 0, 0, { x: 800 }), contact(8, 1, 180)), 22100, footprints).length, 1);
-  assert.equal(tracker.identities.length, 4);
+  assert.equal(tracker.update(map(contact(9, 0, 0, { x: 800 }), contact(8, 1, 180)), 30000, footprints).length, 0);
+  assert.equal(right.contactId, 8); assert.equal(right.present, true);
+  assert.equal(left.present, false); assert.equal(tracker.identities.length, 3);
+});
+
+test('repeated pause boundaries preserve a resting cannon awaiting redetection', () => {
+  const tracker = new CannonTracker(); tracker.update(map(contact(1)), 0, footprints);
+  const identity = tracker.identities[0];
+  tracker.paused(100); tracker.paused(110); tracker.resumed(10000);
+  tracker.update(new Map(), 14000, footprints);
+  tracker.paused(15000); tracker.resumed(20000);
+  assert.equal(tracker.update(map(contact(8, 0, 330)), 25000, footprints).length, 0);
+  assert.equal(identity.contactId, 8); assert.equal(identity.angle, 30);
+  assert.equal(identity.present, true); assert.equal(tracker.identities.length, 1);
+  // Once observed, a later genuine lift still uses ordinary bounded tracking-gap recovery.
+  tracker.update(new Map(), 26000, footprints);
+  assert.equal(tracker.update(map(contact(9)), 30000, footprints).length, 1);
+});
+
+test('a cannon already lifted before pause does not become a pending pause match', () => {
+  const tracker = new CannonTracker(); tracker.update(map(contact(1)), 0, footprints);
+  tracker.update(new Map(), 100, footprints);
+  tracker.paused(200); tracker.resumed(10000);
+  assert.equal(tracker.update(map(contact(9)), 15000, footprints).length, 1);
 });
 
 test('a changed pose on redetection updates aim immediately without a further turn', () => {

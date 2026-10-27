@@ -53,6 +53,27 @@ test('browser and AI shots retain the elevation limits without a physical barrel
   assert.equal(beginShot(m,45,70,{x:240,y:600,facingDeg:NaN}),false);
   assert.equal(m.phase,'aim');assert.equal(m.projectile,null);
 });
+test('downward physical shots hit the tower immediately instead of passing through it', () => {
+  for (const side of [0,1] as const) {
+    const m=createMatch(4);m.turn=side;
+    assert.ok(beginShot(m,45,70,{x:TUNE.towerX[side],y:TUNE.cannonY+112,facingDeg:90}));
+    advance(m,TUNE.step);
+    assert.equal(m.phase,'settle');
+    assert.equal(m.impact?.kind,'hit');
+    assert.equal(m.impact?.target,side);
+    assert.equal(m.health[side],TUNE.health-1);
+    assert.equal(m.health[(1-side) as Side],TUNE.health);
+  }
+});
+test('ordinary upward launches clear their own tower without collision immunity', () => {
+  for (const side of [0,1] as const) for (const angle of [15,45,80]) {
+    const m=createMatch(4);m.turn=side;
+    assert.ok(beginShot(m,angle,70));
+    advance(m,.1);
+    assert.equal(m.phase,'flight');
+    assert.deepEqual(m.health,[TUNE.health,TUNE.health]);
+  }
+});
 test('the default shot is blocked and flat shots cannot shortcut the battlefield', () => {
   for(const side of [0,1] as const) {
     assert.equal(trace(side,0,45,70).kind,'tree','default aim should require adjustment');

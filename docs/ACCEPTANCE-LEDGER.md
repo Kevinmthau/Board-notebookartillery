@@ -1,5 +1,14 @@
 # Acceptance ledger: Bloog Barrage
 
+## October 27, 2026 — Code review fixes
+
+- **Request:** Review the game, fix findings until clear, then commit and push.
+- **Source evidence:** Reviewed gameplay/AI and shared obstacle geometry, native tracking and physical barrel input, main roster/save/pause/result lifecycle, UI floors, browser adapter, and package scripts. Fixed the issues recorded in `docs/EDIT-HISTORY.md`; independent review found no remaining actionable issues in those scopes. This is a review result, not a claim that all possible bugs are eliminated.
+- **Automated evidence:** `npm test`: 117 passed, 0 failed, 3 inherited catalog skips. New coverage includes early downward tower hits, invalid glyph-zero poses, delayed/repeated pause recovery, queued RAF cancellation, same-batch lift/move/wrong-piece Fire rejection, roster replacement/removal, and late Continue restoration from title help. Existing AI, terrain, save, physical spout, and gameplay checks pass. `npm run build:web` passes TypeScript, Vite, native packing, and standalone browser packaging. Native platform build: `c607118b44364d1f`; appId and packageId preserved.
+- **Browser evidence:** Actual pointer clicks verified Friend selection, Cancel, replacing with Pip, and starting solo play. A separate two-human match verified enlarged HUD labels and aim hint, Fire on both sides, and pausing/resuming an in-flight shot before the next turn. Screenshots: `docs/screenshots/review-selector-pip-browser.png` and `docs/screenshots/review-hud-browser.png`.
+- **Board and human evidence:** No new device installation or physical playtest in this review. Existing hardware reach, pause-alignment, and full-match checks remain open.
+- **Handover:** Commit and push the reviewed source, regressions, and evidence to the existing `codex/bloog-barrage` branch.
+
 ## October 27, 2026 — Fire layout accepted; commit and push
 
 - **Human evidence:** The user confirmed “That works” and requested committing and pushing the change. The Fire-button placement is accepted; this does not establish a complete hardware match or a separate reach assessment.

@@ -32,6 +32,9 @@
 - [x] Move Fire below the active tower, center angle/power controls, and verify firing on both sides in the browser and native integration harness.
 - [x] Build, package, install, and launch the active-side Fire layout on the paired Board.
 - [x] User confirms the relocated Fire button works.
+- [x] Review gameplay, Board contacts, main lifecycle, platform integration, and packaging; fix confirmed findings and complete an independent second review.
+- [x] Add regressions for immediate contact invalidation at Fire, quick pause/resume, delayed/repeated piece recovery, invalid poses, downward tower collisions, roster loss, and late restore during help.
+- [x] Verify browser opponent selection with real clicks, 48 px in-play labels, both Fire positions, and pause/resume; pass automated tests and native/browser builds after review fixes.
 - [ ] Confirm the relocated Fire button's reach with real Cannons on Board.
 - [ ] Visually verify spout alignment after pause recovery on Board with real Cannons.
 - [ ] Complete a full hardware match and collect feedback on aiming feel, reach, and pacing.

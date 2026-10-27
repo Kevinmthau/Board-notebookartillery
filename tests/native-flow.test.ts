@@ -8,7 +8,8 @@ import { TUNE, type Match, type Side } from '../src/artillery';
 import { CANNON_DOCKS } from '../src/cannons';
 
 const g = globalThis as unknown as Record<string, unknown>;
-let aria = '', now = 1000, raf: ((time: number) => void) | null = null;
+let aria = '', now = 1000, nextFrameId = 0;
+const frames = new Map<number, (time: number) => void>();
 let saved: { version: number; match: Match; sides: {sessionId:number;side:Side}[] } | undefined;
 let loaded: typeof saved;
 let restore: (() => void) | undefined;
@@ -44,8 +45,8 @@ const canvas = () => ({ width: 1920, height: 1080, style: {}, getContext: contex
 const param = () => ({ value: 1, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {}, setTargetAtTime() {}, cancelScheduledValues() {} });
 const audioNode = () => ({ connect() {}, disconnect() {}, start() {}, stop() {}, gain: param(), frequency: param(), detune: param(), Q: param() });
 Object.defineProperty(performance, 'now', { value: () => now, configurable: true });
-g.requestAnimationFrame = (callback: (time: number) => void) => { raf = callback; return 1; };
-g.cancelAnimationFrame = () => { raf = null; };
+g.requestAnimationFrame = (callback: (time: number) => void) => { frames.set(++nextFrameId, callback); return nextFrameId; };
+g.cancelAnimationFrame = (id: number) => { frames.delete(id); };
 g.document = { title: 'Native flow test', hidden: false, fonts: { add() {}, size: 0, ready: Promise.resolve() },
   querySelector: canvas, createElement: canvas, addEventListener: listen, removeEventListener() {} };
 g.FontFace = class { load() { return Promise.resolve(this); } };
@@ -98,9 +99,11 @@ process.on('unhandledRejection', error => errors.push(error));
 function run(seconds: number) {
   for (let i = 0; i < Math.round(seconds * 60); i++) {
     now += 1000 / 60;
-    const callback = raf; raf = null;
-    if (!callback) continue;
-    draws.length = 0; arcs.length = 0; callback(now);
+    const pending = [...frames];
+    for (const [id, callback] of pending) {
+      if (!frames.delete(id)) continue;
+      draws.length = 0; arcs.length = 0; callback(now);
+    }
   }
 }
 const piece = (id: number, side: Side, facing = side === 0 ? 0 : 180, phase = BoardContactPhase.Moved): BoardContact => ({
@@ -179,9 +182,17 @@ const totalShots = () => saved!.match.shots[0] + saved!.match.shots[1];
 
 test('native landscape setup starts two-player and solo matches, with deliberate firing and pause recovery', async () => {
   await import('../src/main');
-  for (let i = 0; i < 30 && !raf; i++) await new Promise(resolve => setTimeout(resolve, 10));
-  assert.ok(raf, 'main did not boot'); run(.3);
+  for (let i = 0; i < 30 && !frames.size; i++) await new Promise(resolve => setTimeout(resolve, 10));
+  assert.ok(frames.size, 'main did not boot'); run(.3);
   assert.match(aria, /\. title\.$/);
+  // Resuming before the pending display callback must not create parallel render loops.
+  for (let i = 0; i < 3; i++) {
+    for (const callback of pauses) callback();
+    assert.equal(frames.size, 0, 'pause left an animation callback queued');
+    for (const callback of resumes) callback();
+    assert.equal(frames.size, 1, 'resume created duplicate animation callbacks');
+  }
+  run(.1); assert.equal(frames.size, 1, 'quick pauses multiplied the render loop');
   assert.equal(selections.length, 0, 'boot opened the player selector before an intentional setup action');
   tap(960, 730); assert.match(aria, /\. setup\.$/, 'landscape Play did not open setup');
   tap(960, 950); assert.equal(saved, undefined, 'Start accepted an incomplete roster');
@@ -205,6 +216,20 @@ test('native landscape setup starts two-player and solo matches, with deliberate
   assert.equal(saved.match.phase, 'aim'); assert.deepEqual(saved.match.shots, [0, 0]);
   assert.deepEqual(saved.sides, [{sessionId:1,side:1},{sessionId:2,side:0}]);
   assertPreviewAtMuzzle(0, piece(1, 0, 0));
+
+  // Input can change between display frames. Fire must use this batch's cannon state,
+  // even when the finger event comes before the lift/move in that same batch.
+  for (const invalid of [
+    piece(1, 0, 0, BoardContactPhase.Ended),
+    piece(1, 0, 0, BoardContactPhase.Canceled),
+    { ...piece(1, 0), x: 960 },
+    { ...piece(1, 0), glyphId: 1 },
+  ]) {
+    emit(finger(501, TUNE.towerX[0], 960, BoardContactPhase.Began), invalid);
+    assert.equal(totalShots(), 0, 'Fire accepted a lifted, displaced, or wrong piece before the next frame');
+    emit(finger(501, TUNE.towerX[0], 960, BoardContactPhase.Ended));
+    emit(piece(1, 0, 0, BoardContactPhase.Began)); run(.05);
+  }
 
   // Analog physical rotation affects the shot; only a separate native finger Fire commits it.
   // Preview must still follow vertical/backward/downward poses instead of clamping toward the opponent.
@@ -301,7 +326,9 @@ test('native landscape setup starts two-player and solo matches, with deliberate
   const checkpoint = JSON.parse(JSON.stringify(saved)) as NonNullable<typeof saved>;
   menu('setup'); tap(160, 110);
   assert.match(aria, /\. title\.$/);
+  tap(960,890); assert.match(aria, /\. help\.$/);
   loaded = structuredClone(checkpoint); assert.ok(restore); restore(); run(.1);
+  tap(160,110); assert.match(aria, /\. title\.$/);
   assert.ok(draws.includes('CONTINUE'), 'restored title did not offer Continue');
   emit(piece(1, 1, 180, BoardContactPhase.Ended)); run(1.3);
   emit(piece(41, 1, 180, BoardContactPhase.Began)); run(.4);
@@ -316,5 +343,19 @@ test('native landscape setup starts two-player and solo matches, with deliberate
   assert.deepEqual(saved.match.birds, checkpoint.match.birds, 'Continue replaced the bird crossing');
   assert.ok(saved.match.elapsed >= checkpoint.match.elapsed && saved.match.elapsed < checkpoint.match.elapsed + .2, 'Continue reset or jumped the bird clock');
   assert.deepEqual(saved.sides, checkpoint.sides, 'Continue rebound the right-side human to the wrong tower');
+
+  // Losing a player under help must not return to an ownerless match.
+  menu('help'); players.splice(players.findIndex(p=>p.type===BoardPlayerType.AI),1);
+  for (const callback of rosterChanged) callback();
+  assert.match(aria, /\. setup\.$/, 'roster removal under help left a path back to incomplete play');
+  menu('restart'); assert.match(aria, /\. setup\.$/, 'Rematch started without two roster players');
+  players.push(pip); for (const callback of rosterChanged) callback();
+  tap(960,950); assert.match(aria, /\. aim\./);
+
+  // Equal roster counts do not guarantee that both new session identities have seats.
+  players.splice(0,players.length,{...alice,sessionId:11},{...bob,sessionId:12});
+  for (const callback of rosterChanged) callback();
+  assert.match(aria, /\. setup\.$/, 'two replacement session IDs stranded the match without assigned towers');
+  run(1); assert.match(aria, /\. setup\.$/, 'roster changes restarted play without an explicit Start');
   assert.deepEqual(errors, []); assert.ok(aria.length > 0);
 });

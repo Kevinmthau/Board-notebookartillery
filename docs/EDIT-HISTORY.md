@@ -1,5 +1,13 @@
 # Edit history
 
+## October 27, 2026 — Code review and fixes
+
+User requested: “do a code review of this game. Fix any findings until all clear the commit and push.” Reviewed gameplay/AI, Board contact tracking, roster/save/pause lifecycle, rendering, browser selection, and packaging, then independently reviewed the fixes.
+
+Fixed stale contact state allowing Fire immediately after a lift or displacement; duplicate display loops after rapid pause/resume; lost cannon identity after delayed or repeated pause recovery; invalid glyph-zero poses; and launch-time immunity that let downward shots pass through a tower. Fixed the browser opponent chooser's disabled pointer input, roster changes stranding play/help/results without assigned players, and late saves being hidden while title help was open. Raised in-play labels to the required 48 px, moved the offscreen-shot arrow inside the safe inset, and cleared transient effects on rematch.
+
+Added focused regressions and browser evidence. No new gameplay assets, dependencies, or save schema; permanent app identity, SDK tarball, lockfile, and platform layer remain intact.
+
 ## October 27, 2026 — Fire layout accepted; commit and push
 
 User confirmed: “That works. Commit and push the change.” Recorded acceptance of the Fire-button placement and prepared the validated implementation, integration inputs, project records, and screenshots for publication to the existing repository.
