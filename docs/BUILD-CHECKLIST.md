@@ -14,4 +14,7 @@
 - [x] Automated tests and Board package pass.
 - [x] Browser title, setup, shot, damage, result, rematch, and pause checks pass.
 - [x] Install on KT's Board and verify the requested single landscape-facing title and Play button in a hardware screenshot.
-- [ ] Real Board and human playtest: requires hardware and players; unverified.
+- [x] Orient setup, help, controls, player information, and results with the landscape; match native touch positions to drawn controls.
+- [x] Exercise explicit Start, canceled/retried player selection, a lone right-side human, two-player play, and solo play through the native integration harness.
+- [x] User confirmed startup with real cannons on KT's Board; hardware screenshot shows an active match, landscape controls, and tower damage.
+- [ ] Complete a full hardware match and collect feedback on aiming feel, reach, and pacing.

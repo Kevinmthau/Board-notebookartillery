@@ -6,7 +6,7 @@
 - **One line:** Turn your real cannon, lob a shot, and knock down the other tower.
 - **Players:** Two people by default; one person can choose a computer opponent.
 - **Piece set:** `save-the-bloogs`, using the two Cannon pieces, glyph 2.
-- **First move:** Place a Cannon on the tower platform at your edge.
+- **First move:** Tap Play, choose an opponent, place the Cannons on their towers, and tap Start Game.
 - **Sound:** Short effects for placement, firing, impact, and victory; platform audio controls.
 - **Goal:** Test whether turning a physical Cannon is a clear, satisfying way to aim a lob.
 - **Starting point:** Exact board-games-ai Studio starter, TypeScript, Canvas 2D, Vite, vendored SDK beta.8.
@@ -36,24 +36,23 @@
 - Tracking gaps and pause redetection preserve ownership, aim calibration, and health. They never fire or repeat a placement effect.
 - No digital cannon appears in play, including the AI side. The real piece supplies the cannon.
 - Browser play shows the towers and trajectory only. Drag from a tower or use angle controls, set power, then fire.
-- Real piece renders identify equipment in setup/help only. No cannon render follows a physical piece.
+- Real piece renders identify equipment in help only. Setup keeps the actual tower platforms visible. No cannon render follows a physical piece.
 - Fire is a separate deliberate finger action. A shot already in flight completes before another begins.
 - Hit feedback: a quick squash, colored burst, falling masonry, sound, and one clear health change.
 - Victory: the tower falls and a short celebration leads to a shared result choice.
 
 ## Players and seating
 
-- Two seats: left and right edges of Board. Browser HUDs face the screen viewer.
-- The shared opening screen faces the landscape, with one upright title and one horizontal Play button, as requested by the user after trying the Board build.
-- On Board, each seat's controls and name face its edge. Shared result labels are repeated facing each seat within one result surface.
+- Two players own the left and right towers. Every screen and label faces the landscape on Board and in the browser, as requested by the user after trying the Board build.
+- One shared horizontal power slider and Fire button control the active player's shot. Player names, health, wind, setup, help, and results use the same upright orientation.
 - Board's selector in `src/seats.ts` supplies every player and AI. Identity follows `sessionId`.
 - A Cannon placed at an unclaimed tower binds the next unbound human in the roster.
-- If no unbound player exists, setup opens the selector. It never invents an anonymous native player.
+- Setup shows the chosen roster and cannon readiness separately. Choose Your Opponent opens Board's selector. While fewer than two players are seated it always adds a player, even when the first human owns the right tower. It never invents an anonymous native player.
 - One registered AI type, named Pip, aims with bounded error and uses normal shot rules.
 - AI uses the unclaimed seat and needs no physical cannon. Its tower stays visible; it has no cannon art.
-- The shared side-view valley is sideways to the two native seats; their controls and cues face each player.
+- Players read the shared side-view valley and all controls from its landscape orientation.
 - The browser host provides simulated player selection and pointer controls. Native detection never uses that fallback.
-- Play becomes ready after two roster seats are bound and required human cannons are present.
+- Start Game becomes available after two distinct roster seats are bound and required human cannons are present at their matching towers. A deliberate tap starts the match; selection and placement never start it automatically.
 - A human's first intentional shot starts the duel. No countdown or placement triggers a shot.
 - Preserve seats and real pieces for rematches. Change setup releases bindings.
 
@@ -62,7 +61,7 @@
 | State | Next action | Signal | Ends when |
 |---|---|---|---|
 | Title | Tap Play or place a Cannon | Colorful valley, moving clouds, one landscape-facing title and Play button | Setup begins |
-| Setup | Choose people and place cannons | Canonical Cannon picture and empty tower destination | Required pieces are present |
+| Setup | Choose people, place cannons, tap Start Game | Player count/names, per-tower readiness, visible tower platforms, enabled Start Game | Start Game is tapped with both players ready |
 | Aim | Turn the cannon | Active tower banner, angle numeral, short shot arc | Fire is tapped |
 | Power | Set strength | Large power track and percent numeral | Shot begins |
 | Flight | Watch the shot | Cannonball trail and wind arrow | Collision or miss |
@@ -74,7 +73,7 @@
 ## First minute
 
 1. Title: a vivid blue sky, soft hills, trees, and chunky stone towers establish the world.
-2. Setup: choose the two players; place the real Cannons, with one short landing effect each.
+2. Setup: choose the two players; place the real Cannons, with one short landing effect each; tap Start Game once both are ready.
 3. First move: rotating adjusts elevation; a short arc explains the effect immediately.
 4. First shot: choose power and tap Fire; follow a bright projectile to impact.
 5. Turn change: the other tower's flag pulses, showing who acts next.
@@ -111,8 +110,10 @@
 | Look | Colorful Bloogs world | person | Answer | Original world artwork |
 | Cannon depiction | Physical piece only | person | Correction | No digital cannon in play, even for AI |
 | Win | Three direct hits | builder | Proposed first playable | Fast enough to test complete matches |
-| Seats | Left and right edges | builder | Tower duel geometry | Seat-oriented native HUD |
+| Seats | Left and right towers | builder | Tower duel geometry | Physical ownership remains independent of screen orientation |
 | Title orientation | One landscape-facing title and Play button | person | Board screenshot correction, October 27 | Overrides the earlier repeated seat-facing title layout |
+| All-screen orientation | Landscape setup, help, gameplay controls, and results | person | Follow-up correction, October 27 | Replaces all seat-facing UI and rotated touch hit tests |
+| Start flow | Explicit Start Game after roster and cannon readiness | builder | User requested reliable starting | Add the second player rather than replacing a lone right-side player |
 | Aim | Relative rotation from initial resting pose | builder | Avoid absolute-facing confusion | Keep zero through blinks and pause |
 | Recipe | Aim Blast, adapted to deliberate turn-based fire | builder | Genre recipes | No automatic shots |
 | Publishing | Local preview and packaged webapp first | builder | Requested Studio workflow | No external publish or push requested |

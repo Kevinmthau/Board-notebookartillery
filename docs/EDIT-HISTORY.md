@@ -19,3 +19,9 @@ Installed and launched the existing native package on KT's Board after the user 
 ## October 27, 2026 — landscape title
 
 User requested one Play button oriented with the landscape after seeing the rotated native opening screen. Replaced the duplicated seat-facing title and button labels with one shared upright title, one horizontal Play button, and one horizontal How to Play button. The Board and browser now share the same opening layout. App identity and physical Cannon gameplay remain unchanged.
+
+## October 27, 2026 — landscape throughout and reliable starting
+
+User requested landscape setup, help, power/Fire controls, and a working start flow. All UI now faces the landscape, including results, player names, health, and wind. Touch hit tests use the same unrotated positions. Setup shows roster and cannon readiness with an explicit Start Game button.
+
+Fixed choosing an opponent when the lone human owns the right tower: the selector now adds the second player instead of replacing the first. Canceled selection can be retried. Two human cannons or one human cannon plus Pip must be ready before Start. Saved side assignments are restored before binding physical cannons, and both title taps and cannon arrivals use the same saved-aware entry path. Expanded the native integration test through these startup paths and landscape firing, pause recovery, and rematch.

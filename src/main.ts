@@ -5,8 +5,8 @@ import { drawTitle } from './title';
 import { Splashes, Particles } from './fx';
 import { loadPieceFootprints, pieceFootprint, type PieceFootprints } from './piece-footprints';
 import { noteContacts, pickPlayer, registerAiTypes, seated, selectorOpen } from './seats';
-import { advance, beginShot, clamp, createMatch, launchPoint, preview, TUNE, type Match, type Side } from './artillery';
-import { CannonTracker, type CannonIdentity } from './cannons';
+import { advance, beginShot, clamp, createMatch, preview, TUNE, type Match, type Side } from './artillery';
+import { CannonTracker } from './cannons';
 import { chooseShot } from './opponent';
 import { createWorld } from './world';
 
@@ -26,27 +26,29 @@ let match = createMatch(), mode: Mode = 'title', previous: Mode = 'title';
 let seats: Seat[] = [], ready = false, running = true, last = 0, rosterTime = -1000, simulationTime = 0;
 let aiPlan: { angle: number; power: number } | null = null, aiDelay = 0, lastTurn = -1;
 let impactSerial = 0, banner = '', bannerTime = 0, helpPage = 0, saveAt = 0;
-let setupLocked = false, continuing = false, resumeAt = -Infinity;
+let continuing = false, resumeAt = -Infinity;
 let pausedFingers: {x:number;y:number}[] = [];
-const ignoredFingers = new Set<number>(), selectorPlacements = new Set<number>();
+const ignoredFingers = new Set<number>();
 let saved: { version: number; match: Match; sides: {sessionId:number;side:Side}[] } | undefined;
 const active = new Map<number, BoardContact>();
 const unsupported = new Set<number>();
 const gestures = new Map<number, { kind: 'angle' | 'power'; side: Side }>();
 const PLAY: Box = {x:665,y:660,w:590,h:142};
 const LEARN: Box = {x:740,y:830,w:440,h:120};
-const PICK: Box = browser?{x:600,y:720,w:720,h:140}:{x:840,y:290,w:240,h:500};
+const PICK: Box = {x:600,y:720,w:720,h:140};
+const START: Box = {x:665,y:886,w:590,h:140};
 const BACK: Box = { x: 64, y: 48, w: 200, h: 120 };
 const HELP: Box = { x: 900, y: 210, w: 120, h: 120 };
-const AGAIN: Box = browser?{x:530,y:680,w:420,h:140}:{x:790,y:210,w:150,h:660};
-const SETUP: Box = browser?{x:980,y:680,w:420,h:140}:{x:980,y:210,w:150,h:660};
+const AGAIN: Box = {x:530,y:680,w:420,h:140};
+const SETUP: Box = {x:980,y:680,w:420,h:140};
 const inside = (p: { x: number; y: number }, b: Box) => p.x >= b.x && p.x <= b.x+b.w && p.y >= b.y && p.y <= b.y+b.h;
 const seatFor = (side: Side) => seats.find(s => s.side === side);
 const isAI = (side: Side) => seatFor(side)?.player.type === BoardPlayerType.AI;
 const cannonFor = (side: Side) => tracker.identities.find(c => c.id === seatFor(side)?.cannon);
-const hasCannon = (side: Side) => browser || isAI(side) || Boolean(cannonFor(side)?.present && cannonFor(side)?.legal);
+const hasCannon = (side: Side) => browser || isAI(side) || Boolean(cannonFor(side)?.present && cannonFor(side)?.legal && cannonFor(side)?.side===side);
 const nameFor = (side: Side) => seatFor(side)?.player.name ?? (side === 0 ? 'Your tower' : 'Other tower');
 const currentHuman = () => mode === 'play' && match.phase === 'aim' && !isAI(match.turn);
+const canStart = () => ready && !selectorOpen() && seats.length === 2 && new Set(seats.map(s=>s.side)).size === 2 && seats.every(s=>s.side!==null && hasCannon(s.side));
 function cue(text: string, seconds = 2) { banner = text; bannerTime = seconds; }
 function setMode(next: Mode) { mode = next; gestures.clear(); updateLabel(); }
 function updateLabel() {
@@ -74,7 +76,7 @@ function syncRoster() {
   const before = seats;
   seats = seated().slice(0,2).map(player => {
     const old = before.find(s=>s.player.sessionId===player.sessionId);
-    return old ? {...old,player} : {player,side:null,cannon:null};
+    return old ? {...old,player,cannon:player.type===BoardPlayerType.AI?null:old.cannon} : {player,side:null,cannon:null};
   });
   // Browser pointer controls use the same roster, with the two screen positions assigned in order.
   if (browser) seats.forEach((s,i)=>{s.side=i as Side;});
@@ -85,8 +87,9 @@ function syncRoster() {
 }
 async function selectOpponent() {
   if (selectorOpen()) return;
-  const opponent=seats.find(s=>s.side===1) ?? seats[1];
-  const selected=await pickPlayer([], opponent?.player.sessionId);if(selected)setupLocked=false;syncRoster();
+  // A lone player may own either tower. Add the second player before offering replacement.
+  const opponent=seats.length===2?seats[1]:undefined;
+  await pickPlayer([], opponent?.player.sessionId);syncRoster();
 }
 function bindCannons() {
   for (const c of tracker.identities) {
@@ -98,9 +101,22 @@ function bindCannons() {
     if (seat && !seats.some(s=>s!==seat && s.side===c.side)) { seat.side=c.side;seat.cannon=c.id; }
   }
 }
-function newMatch() { setupLocked=false;continuing=false;match=createMatch();aiPlan=null;aiDelay=0;lastTurn=-1;impactSerial=0;saved=undefined;setMode('play');persist(); }
+function newMatch() { continuing=false;match=createMatch();aiPlan=null;aiDelay=0;lastTurn=-1;impactSerial=0;saved=undefined;setMode('play');persist(); }
 function enterSetup() { setMode('setup');syncRoster(); }
-function changeSetup() { setupLocked=true;continuing=false;saved=undefined;selectorPlacements.clear();seats.forEach(s=>{s.side=null;s.cannon=null;});enterSetup(); }
+function openMatchSetup() {
+  if(saved){
+    continuing=true;match=saved.match;
+    for(const s of seats){s.side=saved.sides.find(p=>p.sessionId===s.player.sessionId)?.side??null;s.cannon=null;}
+  }
+  enterSetup();
+}
+function changeSetup() { continuing=false;saved=undefined;seats.forEach(s=>{s.side=null;s.cannon=null;});enterSetup(); }
+function startMatch() {
+  syncRoster();
+  if(!canStart())return;
+  if(continuing&&saved){match=saved.match;impactSerial=match.serial;aiPlan=null;aiDelay=0;lastTurn=-1;continuing=false;saved=undefined;setMode('play');persist();}
+  else newMatch();
+}
 function shotOrigin() {
   const c=cannonFor(match.turn);
   let origin;
@@ -116,13 +132,8 @@ function shoot() {
   if (!currentHuman() || !hasCannon(match.turn)) return;
   if (beginShot(match,undefined,undefined,shotOrigin())) { sound('fire');gestures.clear();persist(); }
 }
-function localControls(p:{x:number;y:number},side:Side) {
-  if (browser) return p;
-  // Rotate hit tests exactly as the seat's drawn control strip.
-  return side===0 ? {x:p.y-540,y:120-p.x} : {x:540-p.y,y:p.x-1800};
-}
-function powerBox():Box {return browser?{x:700,y:886,w:660,h:146}:{x:-170,y:-70,w:350,h:140};}
-function fireBox():Box {return browser?{x:1450,y:888,w:400,h:144}:{x:210,y:-70,w:240,h:140};}
+function powerBox():Box {return {x:700,y:886,w:660,h:146};}
+function fireBox():Box {return {x:1450,y:888,w:400,h:144};}
 function setPower(x:number) { const b=powerBox();match.power[match.turn]=Math.round(clamp(20+(x-b.x-32)/(b.w-64)*80,20,100));updateLabel(); }
 function setAim(p:{x:number;y:number}) {
   const side=match.turn, dx=(p.x-TUNE.towerX[side])*(side===0?1:-1),dy=610-p.y;
@@ -133,18 +144,15 @@ function press(p:{x:number;y:number},id:number) {
   if (!running || !ready || selectorOpen()) return;
   if (mode==='title') {
     if (inside(p,LEARN)) {previous='title';helpPage=0;setMode('help');}
-    else if (inside(p,PLAY)) {
-      if(saved) {continuing=true;match=saved.match;enterSetup();for(const s of saved.sides){const found=seats.find(p=>p.player.sessionId===s.sessionId);if(found)found.side=s.side;}}
-      else enterSetup();
-    }
+    else if (inside(p,PLAY)) openMatchSetup();
     return;
   }
-  if (mode==='setup') { if(inside(p,BACK))setMode('title');else if(inside(p,PICK))void selectOpponent();return; }
+  if (mode==='setup') { if(inside(p,BACK))setMode('title');else if(inside(p,PICK))void selectOpponent();else if(inside(p,START))startMatch();return; }
   if (mode==='help') { if(inside(p,BACK))setMode(previous);else if(inside(p,PICK)){helpPage++;if(helpPage>2)setMode(previous);}return; }
   if (mode==='over') {if(inside(p,AGAIN))newMatch();else if(inside(p,SETUP))changeSetup();return;}
-  if (browser && inside(p,HELP)) {previous='play';helpPage=0;setMode('help');return;}
+  if (inside(p,HELP)) {previous='play';helpPage=0;setMode('help');return;}
   if (!currentHuman()) return;
-  const q=localControls(p,match.turn);
+  const q=p;
   if (inside(q,fireBox())) {shoot();return;}
   if (inside(q,powerBox())) {setPower(q.x);gestures.set(id,{kind:'power',side:match.turn});return;}
   if (browser) {
@@ -155,7 +163,7 @@ function press(p:{x:number;y:number},id:number) {
 }
 function move(p:{x:number;y:number},id:number) {
   const g=gestures.get(id);if(!g||!currentHuman()||g.side!==match.turn)return;
-  if(g.kind==='angle')setAim(p);else setPower(localControls(p,g.side).x);
+  if(g.kind==='angle')setAim(p);else setPower(p.x);
 }
 canvas.addEventListener('pointerdown',e=>{
   if(!browser||e.shiftKey)return;
@@ -186,7 +194,7 @@ startInput((batch,contacts)=>{
     const p=browser?clientToWorld(canvas,c.x,c.y):c;
     if(c.type===BoardContactType.Glyph&&c.glyphId!==2&&c.phase===BoardContactPhase.Began&&!unsupported.has(c.contactId)) {
       unsupported.add(c.contactId);splashes.at(p.x,p.y,{inner:65,color:'#f2c85f'});cue('Use the Bloogs cannon',1.5);
-      if(mode==='title')enterSetup();
+      if(mode==='title')openMatchSetup();
     }
     if(c.phase===BoardContactPhase.Ended||c.phase===BoardContactPhase.Canceled)unsupported.delete(c.contactId);
     if(!browser&&c.type===BoardContactType.Finger) {
@@ -202,7 +210,7 @@ startInput((batch,contacts)=>{
 function update(now:number,dt:number) {
   simulationTime+=dt;
   const arrivals=tracker.update(active,now,footprints);
-  if(arrivals.length&&mode==='title')enterSetup();
+  if(arrivals.length&&mode==='title')openMatchSetup();
   for(const c of arrivals) {
     const p=active.get(c.contactId??-1),f=p?pieceFootprint(footprints,p):null;
     splashes.at(c.x,c.y,{inner:f?.radiusPx??97,color:colors[c.side??0],sound:()=>sound('place'),sparks:particles});
@@ -212,12 +220,6 @@ function update(now:number,dt:number) {
   if(mode==='setup') {
     if(now-rosterTime>700){syncRoster();rosterTime=now;}
     bindCannons();
-    const emptyCannon=tracker.identities.find(c=>c.present&&c.legal&&!seats.some(s=>s.cannon===c.id)&&!selectorPlacements.has(c.id));
-    if(!browser&&emptyCannon&&seats.length<2&&!selectorOpen()){selectorPlacements.add(emptyCannon.id);void selectOpponent();}
-    if(!setupLocked&&seats.length===2&&seats.every(s=>s.side!==null)&&([0,1] as const).every(hasCannon)){
-      if(continuing&&saved){match=saved.match;impactSerial=match.serial;continuing=false;saved=undefined;setMode('play');persist();}
-      else newMatch();
-    }
   }
   if(mode==='play') {
     if(!browser&&match.phase==='aim'&&!isAI(match.turn)) {
@@ -246,7 +248,7 @@ function update(now:number,dt:number) {
 function round(b:Box,r=28,fill=cream,stroke?:string){ctx.beginPath();ctx.roundRect(b.x,b.y,b.w,b.h,r);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.lineWidth=3;ctx.strokeStyle=stroke;ctx.stroke();}}
 function text(t:string,x:number,y:number,size=48,color=ink,align:CanvasTextAlign='center') {ctx.font=gameFont(size);ctx.textAlign=align;ctx.textBaseline='middle';ctx.fillStyle=color;ctx.fillText(t,x,y);}
 function fit(t:string,width:number,size=48){ctx.font=gameFont(size);while(t.length&&ctx.measureText(t).width>width)t=t.slice(0,-2)+'…';return t;}
-function button(b:Box,label:string,fill=teal,enabled=true){ctx.save();ctx.globalAlpha=enabled?1:.45;round({...b,y:b.y+7},28,'#193d4933');round(b,28,fill);if(!browser&&b.h>250){for(const side of [0,1]){ctx.save();ctx.translate(b.x+b.w/2,b.y+b.h*(side===0?.28:.72));ctx.rotate(side===0?Math.PI/2:-Math.PI/2);text(label,0,0,40,fill===cream?ink:'#fffdf0');ctx.restore();}}else text(label,b.x+b.w/2,b.y+b.h/2,48,fill===cream?ink:'#fffdf0');ctx.restore();}
+function button(b:Box,label:string,fill=teal,enabled=true){ctx.save();ctx.globalAlpha=enabled?1:.45;round({...b,y:b.y+7},28,'#193d4933');round(b,28,fill);text(label,b.x+b.w/2,b.y+b.h/2,48,fill===cream?ink:'#fffdf0');ctx.restore();}
 function label(t:string,x:number,y:number,color=ink){text(t,x,y,32,color);}
 function heart(x:number,y:number,full:boolean,color:string){ctx.save();ctx.translate(x,y);ctx.beginPath();ctx.moveTo(0,15);ctx.bezierCurveTo(-40,-8,-18,-36,0,-17);ctx.bezierCurveTo(18,-36,40,-8,0,15);ctx.fillStyle=full?color:'#d6ddce';ctx.fill();ctx.restore();}
 function drawHealth(side:Side,x:number,y:number){for(let i=0;i<3;i++)heart(x+(i-1)*57,y,match.health[side]>i,colors[side]);}
@@ -267,16 +269,11 @@ function playerCard(side:Side){
 function controls(side:Side){
   const enabled=match.phase==='aim'&&match.turn===side&&!isAI(side),readyToFire=enabled&&hasCannon(side);
   ctx.save();
+  round({x:48,y:874,w:1824,h:166},32,'#fffbeaef');
+  label(browser?'ANGLE':'TURN TO AIM',342,917);text(`${Math.round(match.angle[side])}°`,342,978,64,colors[side]);
   if(browser){
-    round({x:48,y:874,w:1824,h:166},32,'#fffbeaef');
     button({x:64,y:898,w:120,h:134},'−',cream,enabled);
-    label('ANGLE',342,917);text(`${Math.round(match.angle[side])}°`,342,978,64,colors[side]);
     button({x:500,y:898,w:120,h:134},'+',cream,enabled);
-  }else{
-    ctx.translate(side===0?120:1800,540);ctx.rotate(side===0?Math.PI/2:-Math.PI/2);
-    round({x:-450,y:-75,w:900,h:150},28,'#fffbeaee');
-    label('ANGLE',-330,-38);text(`${Math.round(match.angle[side])}°`,-330,26,56,colors[side]);
-    text(fit(nameFor(side),650),0,-125,48,colors[side]);
   }
   const b=powerBox(),fire=fireBox();
   label('POWER',b.x+b.w/2,b.y+30);
@@ -313,30 +310,30 @@ function drawTitleScreen(now:number){
   label('2 PLAYERS  /  SOLO VS PIP',960,1002,ink);
 }
 function drawSetup(){
-  if(!browser){
-    ctx.fillStyle='#d9f3e8d8';ctx.fillRect(0,0,1920,1080);
-    for(const side of [0,1] as const){ctx.save();ctx.translate(side===0?460:1460,540);ctx.rotate(side===0?Math.PI/2:-Math.PI/2);text('READY TO LOB?',0,-240,64);equipment(0,-80,190);text('Cannon goes on your tower.',0,80,40);text('Turn to aim. Tap power and Fire.',0,145,40);text(fit(nameFor(side),650),0,245,48,colors[side]);ctx.restore();}
-    button(PICK,'PLAYERS');button(BACK,'BACK',cream);return;
-  }
   ctx.fillStyle='#d9f3e8b8';ctx.fillRect(0,0,1920,1080);button(BACK,'BACK',cream);
-  text('A cannon. A tower. A rival.',960,185,72);
-  const human=seats[0];
-  round({x:440,y:300,w:1040,h:380},36,cream);
-  equipment(640,472,200);
-  text(browser?'Your cannon does the aiming.':'Place a cannon on each tower.',1120,402,40);
-  text(browser?'Drag to aim in the browser.':'Point forward. Turn to aim.',1120,468,40);
-  text('Set power. Tap Fire.',1120,534,40);
-  label(human?`${fit(human.player.name,450,32)} is ready`:'Waiting for Board players…',960,626,teal);
-  button(PICK,'CHOOSE YOUR OPPONENT');
-  if(!browser)for(const side of [0,1] as const)if(!hasCannon(side)){equipment(TUNE.towerX[side],590,140);}
-  label('Save the Bloogs · 2 Cannon pieces',960,935);
+  text('READY TO LOB?',960,185,72);
+  for(const side of [0,1] as const){
+    const x=side===0?64:1356,seat=seatFor(side);
+    round({x,y:275,w:500,h:220},30,cream);
+    label(side===0?'LEFT TOWER':'RIGHT TOWER',x+250,312,colors[side]);
+    text(fit(seat?.player.name??(browser?'Choose a player':'Place your cannon'),440),x+250,371,48,colors[side]);
+    text(isAI(side)?'Pip is ready':seat&&hasCannon(side)?'Ready!':browser?'Choose a player':'Cannon goes here ↓',x+250,441,40);
+  }
+  round({x:620,y:275,w:680,h:350},32,cream);
+  text(browser?'Drag from your tower to aim.':'Put real cannons on the towers.',960,335,40);
+  text(browser?'Or use the − / + buttons.':'Turn your cannon to aim.',960,403,40);
+  text('Set power. Tap Fire.',960,471,40);
+  label(`${seats.length} / 2 PLAYERS CHOSEN`,960,535,teal);
+  label(fit(seats.map(s=>s.player.name).join('  +  ')||'Choose your players below',610,32),960,585);
+  const missing=([0,1] as const).filter(side=>!hasCannon(side)||!seatFor(side));
+  const next=seats.length<2?'Choose '+(seats.length?'your opponent':'your first player'):
+    canStart()?'All set. Tap Start Game.':browser?'Choose your players':
+    missing.length===2?'Place a cannon on each tower':`Place a cannon on the ${missing[0]===0?'left':'right'} tower`;
+  text(next,960,669,40,teal);
+  button(PICK,seats.length<2?(seats.length?'CHOOSE YOUR OPPONENT':'CHOOSE A PLAYER'):'CHANGE OPPONENT',cream);
+  button(START,continuing?'CONTINUE GAME':'START GAME',teal,canStart());
 }
 function drawHelp(){
-  if(!browser){
-    ctx.fillStyle='#d9f3e8ed';ctx.fillRect(0,0,1920,1080);
-    for(const side of [0,1]){ctx.save();ctx.translate(side===0?460:1460,540);ctx.rotate(side===0?Math.PI/2:-Math.PI/2);text(['TURN TO AIM','SET POWER','THREE HITS'][helpPage],0,-230,64);if(helpPage===0)equipment(0,-60,180);else drawHealth(0,0,-60);text(['Place your cannon. Turn it to aim.','Higher power sends a shot farther.','Take turns. Topple the other tower.'][helpPage],0,100,40);text(['Its first resting direction is your zero.','Watch the wind. Tap Fire to shoot.','Each direct hit breaks one heart.'][helpPage],0,180,32);ctx.restore();}
-    button(PICK,helpPage<2?'NEXT':'DONE');button(BACK,'BACK',cream);return;
-  }
   ctx.fillStyle='#d9f3e8e8';ctx.fillRect(0,0,1920,1080);button(BACK,'BACK',cream);
   const titles=['TURN TO AIM','SET YOUR POWER','THREE HITS. ONE WINNER.'];
   text(titles[helpPage],960,220,72);
@@ -347,11 +344,6 @@ function drawHelp(){
   button(PICK,helpPage<2?'NEXT':previous==='play'?'BACK TO GAME':'GOT IT');label(`${helpPage+1} / 3`,960,934);
 }
 function drawResult(){
-  if(!browser){
-    ctx.fillStyle='#173e4866';ctx.fillRect(0,0,1920,1080);round({x:360,y:130,w:1200,h:820},40,cream);
-    for(const side of [0,1]){ctx.save();ctx.translate(side===0?580:1340,540);ctx.rotate(side===0?Math.PI/2:-Math.PI/2);text('TOWER TOPPLED!',0,-100,48);text(fit(nameFor(match.winner??0),650,64),0,0,64,colors[match.winner??0]);text('WINS!',0,90,64,colors[match.winner??0]);ctx.restore();}
-    button(AGAIN,'REMATCH');button(SETUP,'SETUP',coral);return;
-  }
   ctx.fillStyle='#173e4866';ctx.fillRect(0,0,1920,1080);
   round({x:420,y:270,w:1080,h:600},42,cream);
   const winner=match.winner??0;
@@ -359,7 +351,6 @@ function drawResult(){
   text(fit(`${nameFor(winner)} wins!`,950,80),960,437,80,colors[winner]);
   text(`${match.shots[winner]} shots. A glorious little victory.`,960,548,40);
   button(AGAIN,'REMATCH');button(SETUP,'NEW SETUP',coral);
-  if(!browser){ctx.save();ctx.translate(960,575);ctx.rotate(Math.PI/2);text('WINNER',0,0,48,colors[winner]);ctx.restore();}
 }
 function draw(now:number){
   world.draw(ctx,simulationTime*1000,match,{title:mode==='title'});
@@ -368,8 +359,7 @@ function draw(now:number){
   else if(mode==='help')drawHelp();
   else{
     drawShots();
-    if(browser){playerCard(0);playerCard(1);wind();if(mode==='play'){button(HELP,'?',cream);controls(match.turn);}}
-    else{controls(0);controls(1);for(const side of [0,1] as const){ctx.save();ctx.translate(side===0?350:1570,220);ctx.rotate(side===0?Math.PI/2:-Math.PI/2);drawHealth(side,0,0);text(`WIND ${match.wind>=0?'→':'←'} ${Math.abs(match.wind)}`,0,75,48);ctx.restore();}}
+    playerCard(0);playerCard(1);wind();if(mode==='play'){button(HELP,'?',cream);controls(match.turn);}
     if(mode==='play'){
       if(!hasCannon(match.turn)&&!isAI(match.turn)) {ctx.save();ctx.strokeStyle=colors[match.turn];ctx.lineWidth=5;ctx.setLineDash([14,12]);ctx.beginPath();ctx.ellipse(TUNE.towerX[match.turn],610,86,38,0,0,Math.PI*2);ctx.stroke();ctx.restore();cue('Return your cannon to its tower',.2);}
       if(browser&&match.shots[0]+match.shots[1]===0) {round({x:670,y:760,w:580,h:72},24,'#fffbea');label('Drag from your tower to aim',960,796,teal);}
@@ -378,7 +368,7 @@ function draw(now:number){
     if(mode==='over')drawResult();
   }
   particles.draw(ctx);splashes.draw(ctx);
-  if(mode==='setup'&&bannerTime>0)text(banner,960,1030,48,coral);
+  if(mode==='setup'&&bannerTime>0){round({x:580,y:630,w:760,h:78},24,cream);text(banner,960,669,40,coral);}
 }
 const frame=(now:number)=>{if(!running)return;const dt=Math.min(.05,last?(now-last)/1000:0);last=now;update(now,dt);draw(now);requestAnimationFrame(frame);};
 if(Board.isOnDevice){

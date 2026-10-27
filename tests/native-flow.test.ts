@@ -3,12 +3,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { Board, BoardContactPhase, BoardContactType, BoardPlayerType, type BoardContact } from '@board.fun/web-sdk';
+import { Board, BoardContactPhase, BoardContactType, BoardPlayerType, type BoardContact, type BoardPlayer } from '@board.fun/web-sdk';
 import type { Match, Side } from '../src/artillery';
 
 const g = globalThis as unknown as Record<string, unknown>;
 let aria = '', now = 1000, raf: ((time: number) => void) | null = null;
 let saved: { version: number; match: Match; sides: {sessionId:number;side:Side}[] } | undefined;
+let loaded: typeof saved;
+let restore: (() => void) | undefined;
 let menu: ((id: string) => void) | undefined;
 let contactSink: ((batch: readonly BoardContact[]) => void) | null = null;
 const pauses: (() => void)[] = [], resumes: (() => void)[] = [];
@@ -61,9 +63,9 @@ g.fetch = async (url: string) => {
 g.window = { BoardSDK: {}, addEventListener: listen, removeEventListener() {}, devicePixelRatio: 1 };
 g.BoardPlatform = {
   version: 'test', source: 'bundle', game: { name: 'Native flow test', appId: 'test' },
-  state: { ready: async () => ({ restored: false }), load: () => undefined,
+  state: { ready: async () => ({ restored: false }), load: () => loaded,
     save: (value: unknown) => { saved = JSON.parse(JSON.stringify(value)); }, clear() {},
-    onRestore: () => () => {}, progress: { get: (_key: string, value: unknown) => value, set() {}, all: () => ({}) },
+    onRestore: (callback: () => void) => { restore = callback; return () => {}; }, progress: { get: (_key: string, value: unknown) => value, set() {}, all: () => ({}) },
   },
   audio: { bindBuses() {}, levels: () => ({ music: 70, sfx: 90, muted: false }), onChange: () => () => {} },
   menu: { setButtons() {}, onButton: (callback: (id: string) => void) => { menu = callback; return () => {}; } },
@@ -74,14 +76,19 @@ patch(Board.application, {
   onPause: (callback: () => void) => { pauses.push(callback); return () => {}; },
   onResume: (callback: () => void) => { resumes.push(callback); return () => {}; },
 });
-const players = [
-  { playerId: 'native-alice', sessionId: 1, name: 'Alice', type: BoardPlayerType.Profile, avatarId: '0' },
-  { playerId: 'native-bob', sessionId: 2, name: 'Bob', type: BoardPlayerType.Guest, avatarId: '0' },
-];
+const alice = { playerId: 'native-alice', sessionId: 1, name: 'Alice', type: BoardPlayerType.Profile, avatarId: '0' } as BoardPlayer;
+const bob = { playerId: 'native-bob', sessionId: 2, name: 'Bob', type: BoardPlayerType.Guest, avatarId: '0' } as BoardPlayer;
+const pip = { playerId: 'native-pip', sessionId: 3, name: 'Pip', type: BoardPlayerType.AI, avatarId: '0', aiTypeIndex: 0 } as BoardPlayer;
+const players: BoardPlayer[] = [alice];
+const rosterChanged: (() => void)[] = [];
+const selections: { replace?: number; answer: (selected: boolean) => void }[] = [];
+function selector(replace?: number) {
+  return new Promise<boolean>(answer => selections.push({ replace, answer }));
+}
 patch(Board.session, { areServicesReady: () => true, isReady: () => true,
   getPlayers: () => players, getPlayerCount: () => players.length, getActiveProfile: () => ({ ...players[0], sessionId: -1 }),
-  onPlayersChanged: () => () => {}, onActiveProfileChanged: () => () => {}, setAIPlayerTypes() {},
-  presentAddPlayer: async () => false, presentReplacePlayer: async () => false,
+  onPlayersChanged: (callback: () => void) => { rosterChanged.push(callback); return () => {}; }, onActiveProfileChanged: () => () => {}, setAIPlayerTypes() {},
+  presentAddPlayer: () => selector(), presentReplacePlayer: (sessionId: number) => selector(sessionId),
 });
 process.on('uncaughtException', error => errors.push(error));
 process.on('unhandledRejection', error => errors.push(error));
@@ -101,30 +108,64 @@ const finger = (id: number, x: number, y: number, phase: BoardContactPhase): Boa
   contactId: id, glyphId: 0, type: BoardContactType.Finger, phase, x, y, orientation: 0, isTouched: true,
 });
 function emit(...contacts: BoardContact[]) { assert.ok(contactSink); contactSink(contacts); }
-function fire(side: Side, id = 100) {
-  const x = side === 0 ? 120 : 1800, y = side === 0 ? 870 : 210;
+function tap(x: number, y: number, id = 99) {
   emit(finger(id, x, y, BoardContactPhase.Began));
   emit(finger(id, x, y, BoardContactPhase.Ended));
   run(.05);
 }
+function fire(side: Side, id = 100) {
+  assert.equal(saved!.match.turn, side);
+  tap(1650, 960, id);
+}
+async function answerSelection(player?: BoardPlayer) {
+  const request = selections.at(-1)!;
+  if (player) {
+    if (request.replace === undefined) players.push(player);
+    else players.splice(players.findIndex(p => p.sessionId === request.replace), 1, { ...player, sessionId: request.replace });
+    for (const callback of rosterChanged) callback();
+  }
+  request.answer(Boolean(player));
+  // Drain pickPlayer's promise race and the caller's roster sync before the next touch.
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+  run(.2);
+}
 const totalShots = () => saved!.match.shots[0] + saved!.match.shots[1];
 
-test('native cannon placement, firing, true replacement, and pause recovery keep the match playable', async () => {
+test('native landscape setup starts two-player and solo matches, with deliberate firing and pause recovery', async () => {
   await import('../src/main');
   for (let i = 0; i < 30 && !raf; i++) await new Promise(resolve => setTimeout(resolve, 10));
   assert.ok(raf, 'main did not boot'); run(.3);
-  emit(piece(1, 0, 0, BoardContactPhase.Began), piece(2, 1, 180, BoardContactPhase.Began)); run(.5);
-  assert.ok(saved, 'two glyph2 pieces did not make a playable match');
+  assert.match(aria, /\. title\.$/);
+  assert.equal(selections.length, 0, 'boot opened the player selector before an intentional setup action');
+  tap(960, 730); assert.match(aria, /\. setup\.$/, 'landscape Play did not open setup');
+  tap(960, 950); assert.equal(saved, undefined, 'Start accepted an incomplete roster');
+
+  // The first human may choose the RIGHT tower. Adding an opponent must not replace that human.
+  emit(piece(2, 1, 180, BoardContactPhase.Began)); run(.5);
+  tap(960, 790);
+  assert.equal(selections.length, 1); assert.equal(selections[0].replace, undefined, 'one right-side human was replaced instead of adding a second player');
+  await answerSelection();
+  assert.match(aria, /\. setup\.$/); assert.equal(players.length, 1);
+  tap(960, 790);
+  assert.equal(selections.length, 2, 'canceled selection prevented retry');
+  assert.equal(selections[1].replace, undefined);
+  await answerSelection(bob);
+  tap(960, 950); assert.equal(saved, undefined, 'Start accepted a human without a cannon');
+  emit(piece(1, 0, 0, BoardContactPhase.Began)); run(.5);
+  assert.match(aria, /\. setup\.$/, 'placing cannons started the match before Start');
+  assert.equal(saved, undefined);
+  tap(960, 950);
+  assert.ok(saved, 'landscape Start did not begin the ready match');
   assert.equal(saved.match.phase, 'aim'); assert.deepEqual(saved.match.shots, [0, 0]);
-  assert.deepEqual(saved.sides, [{sessionId:1,side:0},{sessionId:2,side:1}]);
+  assert.deepEqual(saved.sides, [{sessionId:1,side:1},{sessionId:2,side:0}]);
 
   // Analog physical rotation affects the shot; only a separate native finger Fire commits it.
   emit(piece(1, 0, 335)); run(1);
   assert.ok(saved.match.angle[0] > 60, 'rotating the cannon did not set elevation');
   assert.equal(totalShots(), 0, 'rotation fired accidentally');
-  emit(finger(90, 120, 540, BoardContactPhase.Began));
-  emit(finger(90, 120, 600, BoardContactPhase.Moved));
-  emit(finger(90, 120, 600, BoardContactPhase.Ended)); run(.05);
+  emit(finger(90, 1030, 986, BoardContactPhase.Began));
+  emit(finger(90, 1140, 986, BoardContactPhase.Moved));
+  emit(finger(90, 1140, 986, BoardContactPhase.Ended)); run(.05);
   assert.ok(saved.match.power[0] >= 70 && saved.match.power[0] <= 80, 'native power drag did not update strength');
   assert.equal(totalShots(), 0, 'setting power fired accidentally');
   fire(0); assert.equal(saved.match.shots[0], 1); run(8);
@@ -140,16 +181,16 @@ test('native cannon placement, firing, true replacement, and pause recovery keep
   // Native menu pause clears contacts. Re-detection gets new ids and must not commit a shot.
   const beforePause = totalShots(), health = [...saved.match.health];
   // The finger begins off Fire, then moves onto it without a new press. It is held when the menu opens.
-  emit(finger(299, 120, 700, BoardContactPhase.Began));
-  emit(finger(299, 120, 870, BoardContactPhase.Moved)); run(.1);
+  emit(finger(299, 1650, 800, BoardContactPhase.Began));
+  emit(finger(299, 1650, 960, BoardContactPhase.Moved)); run(.1);
   assert.equal(totalShots(), beforePause);
   for (const callback of pauses) callback(); run(4);
   assert.equal(totalShots(), beforePause);
   for (const callback of resumes) callback();
   emit(piece(22, 0, 335, BoardContactPhase.Began), piece(1, 1, 180, BoardContactPhase.Began)); run(.15);
-  emit(finger(300, 120, 870, BoardContactPhase.Began)); run(.1);
+  emit(finger(300, 1650, 960, BoardContactPhase.Began)); run(.1);
   assert.equal(totalShots(), beforePause, 'post-menu finger re-detection fired before a new deliberate press');
-  emit(finger(300, 120, 870, BoardContactPhase.Ended)); run(.6);
+  emit(finger(300, 1650, 960, BoardContactPhase.Ended)); run(.6);
   assert.deepEqual(saved.match.health, health); fire(0, 301);
   assert.equal(totalShots(), beforePause + 1, 'fresh Fire after resume was not accepted'); run(8);
 
@@ -163,5 +204,39 @@ test('native cannon placement, firing, true replacement, and pause recovery keep
   menu('setup'); run(2);
   assert.match(aria, /\. setup\.$/, 'Change setup auto-started another match with the old roster and resting cannons');
   assert.equal(saved.match.shots[0], 1, 'Change setup reset the match before players chose their new setup');
+
+  // Recreate the OS's one-profile roster, then choose AI while the human remains on the right.
+  emit(piece(22, 0, 335, BoardContactPhase.Ended)); run(.2);
+  players.splice(0, players.length, alice);
+  for (const callback of rosterChanged) callback();
+  menu('setup'); run(.3);
+  tap(960, 790);
+  assert.equal(selections.length, 3); assert.equal(selections[2].replace, undefined);
+  await answerSelection(pip);
+  assert.match(aria, /\. setup\.$/, 'selecting AI started the match before Start');
+  tap(960, 950);
+  assert.deepEqual(saved.sides, [{sessionId:1,side:1},{sessionId:3,side:0}]);
+  assert.deepEqual(saved.match.shots, [0, 0]);
+  run(8);
+  assert.equal(saved.match.shots[0], 1, 'Pip did not take its turn without a physical cannon');
+  assert.equal(saved.match.turn, 1); assert.equal(saved.match.phase, 'aim');
+  fire(1, 303); assert.equal(saved.match.shots[1], 1, 'right-side human could not fire in solo mode');
+
+  // A cannon placed on a saved title must take the same Continue path as the title button.
+  const checkpoint = JSON.parse(JSON.stringify(saved)) as NonNullable<typeof saved>;
+  menu('setup'); tap(160, 110);
+  assert.match(aria, /\. title\.$/);
+  loaded = checkpoint; assert.ok(restore); restore(); run(.1);
+  assert.ok(draws.includes('CONTINUE'), 'restored title did not offer Continue');
+  emit(piece(1, 1, 180, BoardContactPhase.Ended)); run(1.3);
+  emit(piece(41, 1, 180, BoardContactPhase.Began)); run(.4);
+  assert.match(aria, /\. setup\.$/);
+  assert.ok(draws.includes('CONTINUE GAME'), 'cannon arrival discarded the saved-game setup path');
+  tap(960, 950);
+  assert.match(aria, /^Alice\. flight\./, 'Continue did not resume the saved shot');
+  assert.equal(saved.match.phase, checkpoint.match.phase, 'Continue started a new match');
+  assert.deepEqual(saved.match.shots, checkpoint.match.shots, 'Continue reset shot counts');
+  assert.deepEqual(saved.match.health, checkpoint.match.health, 'Continue reset tower health');
+  assert.deepEqual(saved.sides, checkpoint.sides, 'Continue rebound the right-side human to the wrong tower');
   assert.deepEqual(errors, []); assert.ok(aria.length > 0);
 });

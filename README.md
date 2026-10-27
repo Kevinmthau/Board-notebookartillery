@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173/` (or the port Vite reports). Select **Let's play**, then **Choose your opponent**. Choose a friend or Pip.
+Open `http://127.0.0.1:5173/` (or the port Vite reports). Select **Play**, then **Choose your opponent**. Choose a friend or Pip, then tap **Start Game**.
 
 - Drag from your tower to aim, or use the **− / +** controls.
 - Drag the power track, then tap **Fire**.
@@ -38,7 +38,7 @@ board-connect install bloog-barrage.webapp.zip --launch
 
 The native package contains the configured Board platform and Save the Bloogs model. It excludes browser simulation files.
 
-Put each physical Cannon on its tower platform. Players sit at the left and right edges. Choose people or Pip using Board's player selector. Keep the cannon on its platform while turning; Fire is disabled if it is missing or displaced. The initial resting facing defines 45 degrees. Turn counterclockwise on the left and clockwise on the right to raise the shot.
+Tap **Play**, choose your opponent using Board's player selector, and put each human player's physical Cannon on its tower platform. Setup shows player and cannon readiness; tap **Start Game** when ready. Pip needs no physical cannon. All screens face the landscape, with one shared power slider and Fire button for the active player. Keep the cannon on its platform while turning; Fire is disabled if it is missing or displaced. The initial resting facing defines 45 degrees. Turn counterclockwise on the left and clockwise on the right to raise the shot.
 
 The app identity is committed in `board.config.json`; do not change it after installation.
 
@@ -54,4 +54,4 @@ The app identity is committed in `board.config.json`; do not change it after ins
 
 The gameplay reference is [Notebook Artillery](https://gamemaker.io/en/showcase/notebook-artillery). Scenery and effects are original. Board and Bloogs equipment assets come from the supplied Studio starter.
 
-This prototype has not been tested on physical Board hardware or with an uncoached human player.
+The prototype is installed on KT's Board. See the acceptance ledger for device screenshots, automated startup and input checks, and remaining physical playtest evidence.

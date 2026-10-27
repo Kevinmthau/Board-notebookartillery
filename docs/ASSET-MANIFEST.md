@@ -5,7 +5,7 @@
 | `src/world.ts` | Cached landscape, title world, stone towers, flags, plants, damage and collapse | Original Canvas artwork authored for this project | Project source |
 | `src/main.ts` | Hearts, controls, projectile, trail, teaching UI, synthesized sound effects | Original project code; sounds use platform-managed Web Audio effects bus | Project source |
 | `src/fx.ts` | Finite placement splashes and impact particles | Supplied Board Studio starter | Board starter asset |
-| `public/piece-art/2.png` | Canonical Cannon identification in setup/help only | board-games-ai `save-the-bloogs` catalog | Board-supplied product art; internal prototype use |
+| `public/piece-art/2.png` | Canonical Cannon identification in help only | board-games-ai `save-the-bloogs` catalog | Board-supplied product art; internal prototype use |
 | `public/piece-art/1.png` | Ring reference, unused by gameplay | Same catalog | Board-supplied product art |
 | `public/piece-art/3.png` | Stairs reference, unused by gameplay | Same catalog | Board-supplied product art |
 | `public/piece-art/4.png` | Block reference, unused by gameplay | Same catalog | Board-supplied product art |
