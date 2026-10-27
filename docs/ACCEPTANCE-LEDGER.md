@@ -68,3 +68,15 @@ Remaining questions for a Board playtest:
 5. Are the three-hit matches and Pip's misses a good pace for people?
 
 The first playable does not include destructible ground, weapons, online multiplayer, or progression.
+
+## October 27, 2026 — installed on KT's Board
+
+- **Request:** Install the game so the user can try the real Bloogs Cannons.
+- **Device:** KT's Board, Board OS 3.0.13. Board Connect reports ready and web-app install/launch support.
+- **Authorization:** User requested installation and approved one-time pairing on the device.
+- **Installed appId:** `44a14729-e058-41c3-9812-588229c563e6`, preserving the existing identity.
+- **Package:** Verified ZIP integrity, matching current dist files, exactly one correct Bloogs model, and no browser simulator scripts.
+- **Board evidence:** Board Connect confirmed installation and launch. Hardware screenshot shows the game title and native two-seat layout.
+- **Startup logs:** Platform state became ready. Only missing favicon and optional game-font.json warnings appeared; no application exception was reported.
+- **Screenshot:** `docs/screenshots/board-installed.png`.
+- **Still unverified:** Real Cannon recognition, aiming feel, full hardware match, and human feedback. These await the user's playtest.

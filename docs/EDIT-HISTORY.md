@@ -11,3 +11,7 @@ User corrected the equipment representation: “make the cannons the piece. I do
 User approved the concrete design: “Yes, build it.”
 
 Built local browser and native packages. No external service publication, repository push, or Board installation was performed.
+
+## October 27, 2026 — Board installation
+
+Installed and launched the existing native package on KT's Board after the user approved pairing. Verified the native title screen and startup logs. No gameplay code or app identity changed.
