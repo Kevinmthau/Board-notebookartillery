@@ -72,8 +72,8 @@ export function advance(m: Match, seconds: number) {
   }
   if (m.projectile) { m.projectile.trail.push({ x: m.projectile.x, y: m.projectile.y }); if (m.projectile.trail.length > 28) m.projectile.trail.shift(); }
 }
-export function preview(m: Match, seconds = .43): Point[] {
-  const p = makeProjectile(m.turn, m.angle[m.turn], m.power[m.turn]), points: Point[] = [];
+export function preview(m: Match, seconds = .43, origin?: Point): Point[] {
+  const p = makeProjectile(m.turn, m.angle[m.turn], m.power[m.turn], origin), points: Point[] = [];
   for (let t = 0; t < seconds; t += .065) { points.push({ x: p.x, y: p.y }); stepBall(p, m.wind, .065); }
   return points;
 }

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
+    "build:web": "npm run pack && node scripts/build-web.mjs",
     "pack": "npm run build && node scripts/pack.mjs",
     "preview": "vite preview",
     "test": "node scripts/run-tests.mjs",

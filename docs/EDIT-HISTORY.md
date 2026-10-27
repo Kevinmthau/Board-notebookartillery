@@ -1,10 +1,13 @@
-# Edit history: <game name>
+# Edit history
 
-One dated entry per change someone asked for, newest first: what they asked, in their words, what changed, and what did not. It tells the next builder why the game is the way it is.
+## October 27, 2026 — first playable
 
-## 2026-01-02: bigger paddles (example, replace it)
+User asked for Notebook Artillery mechanics on Board using the exact board-games-ai Studio starter and Bloogs Cannon pieces.
 
-- **Asked for:** "The paddles feel too small at the corners."
-- **Changed:** paddle reach from 140 px to 180 px each side (`src/rules.ts`); a rule test for the corner bounce.
-- **Not changed:** ball speed and scoring.
-- **Evidence:** `npm test` passes; browser checked; Board not tested yet (see docs/ACCEPTANCE-LEDGER.md).
+Confirmed choices: two-player default plus solo against AI; rotate physical Cannon to aim; touch power and Fire; colorful Bloogs world.
+
+User corrected the equipment representation: “make the cannons the piece. I dont want to see a digital cannon.” Gameplay contains no cannon artwork. Setup/help identify the real equipment.
+
+User approved the concrete design: “Yes, build it.”
+
+Built local browser and native packages. No external service publication, repository push, or Board installation was performed.

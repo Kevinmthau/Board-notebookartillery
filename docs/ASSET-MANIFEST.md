@@ -1,8 +1,18 @@
-# Asset manifest: <game name>
+# Asset manifest: Bloog Barrage
 
-Every image, sound, music track, and font the game ships, one row each, added when the file is. Any tool or your own files are fine; say which, so the asset can be traced, made again, or replaced. Never ship a file whose licence you do not know.
-
-| File | Role (where it shows and what it does) | Where it came from (tool and prompt, own work, or source link) | Licence |
+| File or source | Role | Origin | Rights / usage |
 |---|---|---|---|
-| `public/art/title.webp` (example) | Title key art behind the name; the paddles' world in one picture | Image generator, prompt kept in `docs/prompts/title.txt` | Ours |
-| `public/fonts/itc-kabel-ultra.otf` | Board's title face, used for small text | Shipped with the starter | Board's |
+| `src/world.ts` | Cached landscape, title world, stone towers, flags, plants, damage and collapse | Original Canvas artwork authored for this project | Project source |
+| `src/main.ts` | Hearts, controls, projectile, trail, teaching UI, synthesized sound effects | Original project code; sounds use platform-managed Web Audio effects bus | Project source |
+| `src/fx.ts` | Finite placement splashes and impact particles | Supplied Board Studio starter | Board starter asset |
+| `public/piece-art/2.png` | Canonical Cannon identification in setup/help only | board-games-ai `save-the-bloogs` catalog | Board-supplied product art; internal prototype use |
+| `public/piece-art/1.png` | Ring reference, unused by gameplay | Same catalog | Board-supplied product art |
+| `public/piece-art/3.png` | Stairs reference, unused by gameplay | Same catalog | Board-supplied product art |
+| `public/piece-art/4.png` | Block reference, unused by gameplay | Same catalog | Board-supplied product art |
+| `public/fonts/itc-kabel-ultra.otf` | All game text via starter font helpers | Exact Studio starter | Board's bundled font |
+| `public/piece-footprints.json` | Real outlines, facing correction, and cannon clearance | Save the Bloogs catalog | Board-supplied data |
+| `public/model.dla` | Save the Bloogs recognition model 1.3.4 | Save the Bloogs catalog | Board-supplied device model |
+
+No Notebook Artillery artwork or audio is copied. No generated cannon or cannon gameplay sprite is included.
+
+The native package omits the browser simulator. The standalone web build adds the supplied Studio simulator and this project's player-selector adapter.

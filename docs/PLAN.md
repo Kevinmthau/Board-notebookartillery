@@ -24,7 +24,7 @@
 - Two towers face each other across one colorful valley. Players alternate one shot at a time.
 - Each tower starts with three health points. Hits crack the facade; its platform stays fixed until final collapse.
 - A miss changes no health. Terrain blocks a shot. No timer rushes a human turn.
-- Angle is between 15 and 80 degrees. Power is between 20 and 100 percent.
+- Angle is between 15 and 80 degrees. The first resting cannon direction represents 45 degrees. Power is between 20 and 100 percent.
 - Gravity and wind affect every shot. Wind changes between turns and is visible before firing.
 - A short dotted arc shows the start of the trajectory, not the full landing location.
 - All tuning values live together. Both players and AI use the same trajectory and hit rules.
@@ -50,6 +50,7 @@
 - If no unbound player exists, setup opens the selector. It never invents an anonymous native player.
 - One registered AI type, named Pip, aims with bounded error and uses normal shot rules.
 - AI uses the unclaimed seat and needs no physical cannon. Its tower stays visible; it has no cannon art.
+- The shared side-view valley is sideways to the two native seats; their controls and cues face each player.
 - The browser host provides simulated player selection and pointer controls. Native detection never uses that fallback.
 - Play becomes ready after two roster seats are bound and required human cannons are present.
 - A human's first intentional shot starts the duel. No countdown or placement triggers a shot.

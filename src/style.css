@@ -1,2 +1,4 @@
-html,body { margin:0; width:100%; height:100%; overflow:hidden; overscroll-behavior:none; touch-action:none; }
-#game { display:block; width:100%; height:100%; touch-action:none; }
+html,body{margin:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;touch-action:none;background:#bce3e5;}
+body{display:flex;align-items:center;justify-content:center;}
+#game{display:block;width:min(100vw,calc(100dvh * 16 / 9));height:auto;aspect-ratio:16/9;max-height:100dvh;touch-action:none;outline:none;}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
