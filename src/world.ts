@@ -1,4 +1,4 @@
-import { groundY, TREES, TUNE, type Match, type Side } from './artillery';
+import { baseGroundY, birdPoses, groundY, TUNE, type Match, type ObstacleTree, type Side } from './artillery';
 
 // Sky and distant scenery are baked once; the terrain layer is rebaked only after
 // a blast changes it. Cannon graphics deliberately do not exist here.
@@ -70,7 +70,7 @@ function terrainPath(c: Ctx, terrain: Match['terrain'], dy = 0) {
   for (let x = 0; x <= W; x += 4) c.lineTo(x, groundY(x, terrain) + dy);
   c.lineTo(W, H + 5); c.closePath();
 }
-function obstacleTree(c: Ctx, tree: (typeof TREES)[number], index: number) {
+function obstacleTree(c: Ctx, tree: ObstacleTree, index: number) {
   // Every visible trunk and crown uses the same geometry that stops a shot.
   const top = Math.min(...tree.crown.map(p => p.y));
   ellipse(c, tree.x + 4, tree.baseY + 3, 32, 7, '#3F86552B');
@@ -141,7 +141,7 @@ function makeForeground(terrain: Match['terrain']): Surface {
       let drawing = false;
       c.beginPath();
       for (let x = 0; x <= W; x += 4) {
-        const changed = height(x) > groundY(x) + 3;
+        const changed = height(x) > baseGroundY(x, terrain) + 3;
         if (changed) {
           if (!drawing) c.moveTo(x, height(x) + offset); else c.lineTo(x, height(x) + offset);
         }
@@ -161,7 +161,7 @@ function makeForeground(terrain: Match['terrain']): Surface {
     // Flowers and pebbles shrink with the world; they never pretend to block a shot.
     for (let i = 0; i < 31; i++) {
       const x = 32 + i * 62, y = height(x) + 29 + (i % 4) * 14;
-      if (height(x) > groundY(x) + 3) continue;
+      if (height(x) > baseGroundY(x, terrain) + 3) continue;
       flower(c, x, y, 2.3 + (i % 3) * .6, i % 3 ? '#FFF4CB' : '#F2AAA0');
     }
     for (let i = 0; i < 44; i++) {
@@ -170,7 +170,7 @@ function makeForeground(terrain: Match['terrain']): Surface {
     }
     bush(c, 63, height(63) + 19, .38); bush(c, 391, height(391) + 20, .28, true);
     bush(c, 1530, height(1530) + 18, .3, true); bush(c, 1855, height(1855) + 20, .4);
-    TREES.forEach((tree, index) => {
+    terrain.trees.forEach((tree, index) => {
       if (!terrain.fallenTrees.includes(index)) { obstacleTree(c, tree, index); return; }
       const y = height(tree.x);
       // Low broken stumps are aftermath, no longer tall obstacles.
@@ -280,6 +280,22 @@ function flag(c: Ctx, side: Side, now: number, active: boolean) {
   }
   c.restore();
 }
+function bird(c: Ctx, pose: ReturnType<typeof birdPoses>[number]) {
+  const palette = ['#398E99', '#CE786E', '#BA924F'];
+  const color = palette[pose.id % palette.length], lift = Math.sin(pose.wingPhase) * 12;
+  c.save(); c.translate(pose.x, pose.y); c.scale(pose.direction * pose.rx / 30, pose.ry / 18);
+  if (pose.fleeing) c.rotate(-.25);
+  // The live silhouette fits the same 60 × 36 footprint used by the collision.
+  c.fillStyle = color; c.beginPath(); c.moveTo(-13, 3); c.lineTo(-29, -3); c.lineTo(-25, 9); c.closePath(); c.fill();
+  ellipse(c, -3, 3, 17, 10, color);
+  ellipse(c, 0, 7, 11, 5, '#FFF2CC');
+  circle(c, 15, -3, 9, color);
+  c.fillStyle = '#E6B454'; c.beginPath(); c.moveTo(23, -4); c.lineTo(30, 0); c.lineTo(23, 2); c.closePath(); c.fill();
+  c.fillStyle = '#FFF9DF'; c.beginPath(); c.moveTo(-7, 4);
+  c.bezierCurveTo(-21, -lift - 4, -14, -lift - 6, 6, 0); c.quadraticCurveTo(4, 9, -7, 4); c.fill();
+  circle(c, 18, -5, 2.8, '#FFF9DF'); circle(c, 19, -5, 1.5, '#234D58');
+  c.restore();
+}
 
 export function createWorld(): { draw(ctx: Ctx, now: number, match: Match, options?: { title?: boolean }): void } {
   const backdrop = makeBackdrop(), cloud = makeCloud();
@@ -302,8 +318,9 @@ export function createWorld(): { draw(ctx: Ctx, now: number, match: Match, optio
         cachedTerrain = match.terrain; cachedRevision = match.terrain.revision;
       }
       ctx.drawImage(foreground, 0, 0);
+      for (const pose of birdPoses(match)) bird(ctx, pose);
       if (match.phase === 'settle' && match.impact?.kind === 'tree' && match.impact.treeIndex !== undefined) {
-        const tree = TREES[match.impact.treeIndex];
+        const tree = match.terrain.trees[match.impact.treeIndex];
         const progress = Math.min(1, Math.max(0, (TUNE.settle - match.delay) / .7));
         if (tree && progress < 1) {
           ctx.save(); ctx.translate(tree.x, tree.baseY);

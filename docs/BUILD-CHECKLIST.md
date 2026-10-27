@@ -20,4 +20,7 @@
 - [x] Remove the in-play help button and widen the battlefield with smaller targets, three ridges, and ten colliding trees.
 - [x] Add persistent craters and felled trees, shared damaged geometry for rendering/physics/AI, and clean terrain on rematch.
 - [x] Verify terrain destruction in the browser and preserve it through native pause/Continue tests.
+- [x] Generate varied, reachable hills/trees for each new game, retaining exact layout on Continue.
+- [x] Add occasional moving birds with visible flight paths, collision feedback, and pause/save continuity.
+- [x] Verify randomized rematches and birds in the browser, then install the updated Board package.
 - [ ] Complete a full hardware match and collect feedback on aiming feel, reach, and pacing.

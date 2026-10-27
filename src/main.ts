@@ -30,6 +30,11 @@ let continuing = false, resumeAt = -Infinity;
 let pausedFingers: {x:number;y:number}[] = [];
 const ignoredFingers = new Set<number>();
 let saved: { version: number; match: Match; sides: {sessionId:number;side:Side}[] } | undefined;
+function loadSavedMatch() {
+  const run=BoardPlatform.state.load<typeof saved>();
+  return run?.version===2 && run.match?.terrain?.ridges && run.match.terrain.trees
+    && run.match.birds && Number.isFinite(run.match.elapsed) && run.match.phase!=='over' ? run : undefined;
+}
 const active = new Map<number, BoardContact>();
 const unsupported = new Set<number>();
 const gestures = new Map<number, { kind: 'angle' | 'power'; side: Side }>();
@@ -53,10 +58,10 @@ function setMode(next: Mode) { mode = next; gestures.clear(); updateLabel(); }
 function updateLabel() {
   canvas.setAttribute?.('aria-label', mode === 'play' ? `${nameFor(match.turn)}. ${match.phase}. Angle ${Math.round(match.angle[match.turn])} degrees. Power ${Math.round(match.power[match.turn])} percent. Tower health ${match.health.join(' to ')}. Arrow keys aim and power; Space fires.` : mode === 'over' ? `${nameFor(match.winner ?? 0)} wins. Rematch or change setup.` : `${BoardPlatform.game.name}. ${mode}.`);
 }
-function sound(kind: 'place' | 'fire' | 'hit' | 'miss' | 'win') {
+function sound(kind: 'place' | 'fire' | 'hit' | 'miss' | 'bird' | 'win') {
   try {
     const {ctx:a, sfx} = gameAudio();
-    const notes = kind === 'win' ? [440, 554, 660, 880] : [kind === 'fire' ? 150 : kind === 'hit' ? 95 : kind === 'place' ? 480 : 220];
+    const notes = kind === 'win' ? [440, 554, 660, 880] : kind === 'bird' ? [850, 1200] : [kind === 'fire' ? 150 : kind === 'hit' ? 95 : kind === 'place' ? 480 : 220];
     notes.forEach((freq,i) => {
       const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+i*.12;
       o.type=kind==='hit'?'triangle':'sine'; o.frequency.setValueAtTime(freq,t);
@@ -68,7 +73,7 @@ function sound(kind: 'place' | 'fire' | 'hit' | 'miss' | 'win') {
 }
 function persist() {
   if (mode !== 'play' && mode !== 'over') return;
-  BoardPlatform.state.save({ version: 1, match, sides: seats.filter(s=>s.side!==null).map(s=>({sessionId:s.player.sessionId,side:s.side!})) });
+  BoardPlatform.state.save({ version: 2, match, sides: seats.filter(s=>s.side!==null).map(s=>({sessionId:s.player.sessionId,side:s.side!})) });
   updateLabel();
 }
 function syncRoster() {
@@ -232,9 +237,9 @@ function update(now:number,dt:number) {
     }
     const before=match.phase,terrainBefore=match.terrain.revision;advance(match,dt);
     if(match.impact&&match.impact.serial!==impactSerial){
-      impactSerial=match.impact.serial;const hit=match.impact.kind==='hit';
-      particles.burst(match.impact.x,match.impact.y,{count:hit?50:32,color:hit?'#ffcc63':match.impact.kind==='tree'?'#8fc573':'#c7a16b',speed:hit?390:250,life:1,gravity:480,size:10,glow:false});
-      sound(hit?'hit':'miss');cue(hit?'Direct hit!':match.impact.kind==='tree'?'Timber!':match.impact.kind==='ground'?(match.terrain.revision>terrainBefore?'New crater!':'Ground hit!'):'Just missed!',1.1);persist();
+      impactSerial=match.impact.serial;const hit=match.impact.kind==='hit',bird=match.impact.kind==='bird';
+      particles.burst(match.impact.x,match.impact.y,{count:hit?50:bird?12:32,color:hit?'#ffcc63':bird?'#fffbea':match.impact.kind==='tree'?'#8fc573':'#c7a16b',speed:hit?390:bird?120:250,life:1,gravity:bird?50:480,size:bird?6:10,glow:false});
+      sound(hit?'hit':bird?'bird':'miss');cue(hit?'Direct hit!':bird?'Bird blocked it!':match.impact.kind==='tree'?'Timber!':match.impact.kind==='ground'?(match.terrain.revision>terrainBefore?'New crater!':'Ground hit!'):'Just missed!',1.1);persist();
     }
     if(before!==match.phase)persist();
     if(match.phase==='over'){setMode('over');sound('win');persist();}
@@ -337,7 +342,7 @@ function drawHelp(){
   text(titles[helpPage],960,220,72);
   round({x:440,y:330,w:1040,h:330},36,cream);
   if(helpPage===0){equipment(625,480,190);text(browser?'Drag from your tower.':'Cannon goes on your tower.',1110,425,40);text(browser?'Use − / + to adjust the angle.':'Turn to change the arc.',1110,490,40);text('The dotted arc shows your aim.',1110,555,32);}
-  if(helpPage===1){text('Lob over hills and treetops.',960,420,48);text('Shots dig craters and knock down trees.',960,500,40);text('Open a path. Watch the wind. Tap Fire.',960,570,40);}
+  if(helpPage===1){text('A new valley every game.',960,392,48);text('Lob over hills and treetops.',960,458,40);text('Shots dig craters and knock down trees.',960,522,40);text('Watch the wind and passing birds!',960,588,40);}
   if(helpPage===2){text('Take turns. Knock down the other tower.',960,420,48);drawHealth(0,960,510);text('Each direct hit breaks one heart.',960,590,40);}
   button(PICK,helpPage<2?'NEXT':previous==='play'?'BACK TO GAME':'GOT IT');label(`${helpPage+1} / 3`,960,934);
 }
@@ -380,10 +385,9 @@ void(async()=>{
   registerAiTypes([{name:'Pip',description:'A cheerful rival with a good aim and the occasional miss.'}]);syncRoster();
   if(Board.isOnDevice)Board.session.onPlayersChanged(syncRoster);
   [footprints]=await Promise.all([loadPieceFootprints(),loadTitleFont()]);
-  saved=BoardPlatform.state.load<typeof saved>();
-  if(saved?.version!==1||!saved.match?.terrain||saved.match.phase==='over')saved=undefined;
-  BoardPlatform.state.onRestore(()=>{syncRoster();if(mode==='title'){saved=BoardPlatform.state.load<typeof saved>();if(saved?.version!==1||!saved.match?.terrain||saved.match.phase==='over')saved=undefined;}});
+  saved=loadSavedMatch();
+  BoardPlatform.state.onRestore(()=>{syncRoster();if(mode==='title')saved=loadSavedMatch();});
   BoardPlatform.menu.setButtons([{id:'help',title:'How to play',icon:'square'},{id:'restart',title:'Rematch',icon:'circular_arrow'},{id:'setup',title:'Change setup',icon:'left_arrow'}]);
-  BoardPlatform.menu.onButton(id=>{if(id==='help'){previous=mode;helpPage=0;setMode('help');}if(id==='restart'){if(seats.length===2&&seats.every(s=>s.side!==null))newMatch();else enterSetup();}if(id==='setup')changeSetup();});
+  BoardPlatform.menu.onButton(id=>{if(id==='help'){if(mode!=='help')previous=mode;helpPage=0;setMode('help');}if(id==='restart'){if(seats.length===2&&seats.every(s=>s.side!==null))newMatch();else enterSetup();}if(id==='setup')changeSetup();});
   ready=true;updateLabel();requestAnimationFrame(frame);
 })().catch(error=>{console.error('Game could not start',error);ctx.fillStyle=cream;ctx.fillRect(0,0,1920,1080);text('Could not start. Please reload.',960,540,64);});

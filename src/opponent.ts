@@ -7,7 +7,7 @@ const windowCache = new Map<string, readonly Window[]>();
 function shotWindows(turn: Side, wind: number, terrain: Terrain): readonly Window[] {
   // Include the actual damage shape, not just revision: different matches can
   // have the same revision with completely different craters and fallen trees.
-  const key = JSON.stringify([turn,wind,terrain.craters,terrain.fallenTrees]), cached = windowCache.get(key);
+  const key = JSON.stringify([turn,wind,terrain.ridges,terrain.trees,terrain.craters,terrain.fallenTrees]), cached = windowCache.get(key);
   if(cached)return cached;
   const windows: Window[] = [], target = other(turn);
   for (let angle = 33; angle <= 75; angle += 3) {

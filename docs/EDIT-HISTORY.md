@@ -31,3 +31,9 @@ Fixed choosing an opponent when the lone human owns the right tower: the selecto
 User requested removal of the in-game question mark and said opposing towers were too easy to hit: “zoom way out and put more hills and trees in the way as obstacles.” Removed the button and its hit target; help remains in the title and system menu. Reduced tower/landmark scale, widened tower spacing, and added three hills and ten solid foreground trees sharing collision geometry with the rendering. Updated real Cannon dock positions, shorter launch preview, obstacle feedback, shot tuning, and Pip's planning for the new battlefield.
 
 User then chose “Destructible hills and trees.” Ground impacts now carve persistent craters, tree impacts knock trees down, and blasts can undermine tree roots. Rendering, collision, and AI planning use the changed terrain; rematch restores the field. Physical tower platform ground remains fixed.
+
+## October 27, 2026 — new valleys and passing birds
+
+User requested different hills and trees each game to make repeated shots less reliable, plus birds that sometimes get in the way. New matches generate seeded terrain geometry and tree placement/sizes; saved games retain their exact layout and destruction. Physical cannon platforms stay fixed. Occasional small groups of birds cross the battlefield, can block a shot from either player or Pip, and fly away after contact. Their timing is part of the saved match and pauses with play. Help and impact feedback explain the new obstacles.
+
+Also fixed reopening system-menu help while already in help, which previously overwrote its return destination and could trap the user in the help screen.

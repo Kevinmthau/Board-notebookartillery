@@ -21,14 +21,16 @@
 
 ## Rules
 
-- Two smaller towers face each other across a wide colorful valley with three intervening ridges and ten solid foreground trees. Players alternate one shot at a time.
+- Two smaller towers face each other across a wide colorful valley with freshly generated hills and solid foreground trees each match. Players alternate one shot at a time.
 - Each tower starts with three health points. Hits crack the facade; its platform stays fixed until final collapse.
 - A miss changes no tower health. Hills, tree trunks, and tree crowns block shots; distant pale trees are scenery. A terrain hit carves a lasting crater. A tree hit knocks it down; digging away its roots also brings it down. Later shots and Pip use the changed terrain. No timer rushes a human turn.
 - Angle is between 15 and 80 degrees. The first resting cannon direction represents 45 degrees. Power is between 20 and 100 percent.
 - Gravity and wind affect every shot. Wind changes between turns and is visible before firing.
 - A short 0.30-second dotted arc shows the launch direction, not the landing location. The smaller target and taller obstacles require a more precise lob.
 - All tuning values live together. Both players and AI use the same trajectory and hit rules.
-- The first prototype has one valley, one shot type, tower damage, victory, and rematch.
+- Every new game and rematch generates a new valley: hill position, height, and width, plus tree positions and sizes vary. The same saved match retains its exact layout and damage.
+- Small groups of birds occasionally cross the valley. A bird can block either player’s shot, chirps, and flies away; the turn ends without tower damage. Watch for a gap before firing. Birds use the match clock and freeze during pause/help.
+- The prototype has one shot type, tower damage, victory, and rematch.
 - Weapons, progression, networking, and additional piece roles are outside this build.
 - Placement binds ownership and acknowledges the cannon. Placement never fires.
 - Rotation sets elevation. Moving a piece does not move its tower or dodge a shot.
@@ -39,7 +41,7 @@
 - Real piece renders identify equipment in help only. Setup keeps the actual tower platforms visible. No cannon render follows a physical piece.
 - Fire is a separate deliberate finger action. A shot already in flight completes before another begins.
 - Hit feedback: a quick squash, colored burst, falling masonry, sound, and one clear health change. Miss feedback identifies whether the shot struck a hillside or treetop.
-- Terrain damage persists through turns, pause, and same-build saves. Rematch creates fresh hills and trees. Physical tower platforms stay fixed and their immediate ground is protected so real cannons do not need repositioning after a blast.
+- Terrain damage persists through turns, pause, and same-build saves. Rematch creates a different layout of fresh hills and trees. Physical tower platforms stay fixed and their immediate ground is protected so real cannons do not need repositioning after a blast.
 - Victory: the tower falls and a short celebration leads to a shared result choice.
 
 ## Players and seating
@@ -86,7 +88,7 @@
 
 - Winner is the player whose tower remains. Result shows the winner and hit totals.
 - One shared choice: Rematch or Change setup. No timer restarts play.
-- Rematch resets health, wind, shots, projectile, and effects. It preserves players and resting cannon identities.
+- Rematch resets health, wind, shots, projectile, bird crossings, and effects, and generates new hills and trees. It preserves players and resting cannon identities.
 - Change setup releases seats and opens setup without changing the OS roster silently.
 
 ## Look
@@ -94,7 +96,7 @@
 - Colorful Bloogs-inspired world chosen by the user. Original scenery, not Notebook Artillery's notebook artwork.
 - Turquoise, warm coral, butter yellow, fresh green, and sky blue; rounded shapes with strong readable silhouettes.
 - Towers, flags, and stone details use 58% of their earlier scale. Towers sit farther apart at x=240 and x=1680; the real Cannon centers sit at y=678, with their original physical footprint clearance preserved.
-- Three ridges, solid foreground trees, pale distant forests, smaller clouds and sun create the wider battlefield. Ground and solid tree geometry are shared with physics so visible obstacles stop shots at their outlines.
+- Varied ridges, solid foreground trees, pale distant forests, smaller clouds and sun create the wider battlefield. Small colorful birds flap across the sky using the same positions as their collision shapes. Ground and solid tree geometry are shared with physics so visible obstacles stop shots at their outlines.
 - Key art, play, help, and results use the same world. Draw scenery once into cached layers.
 - Screen space around physical cannons stays clean. No drawn cannon or persistent follower.
 - Canvas typography follows the starter font helpers. In-play text is at least 48 px, other text 32 px.
@@ -120,6 +122,8 @@
 | Battlefield difficulty | Zoomed-out view, smaller targets, more hills and trees | person | Browser feedback, October 27 | Targets were too easy to hit; obstacles affect collisions |
 | In-play help button | Removed | person | Browser annotation, October 27 | Help stays in title and system menu |
 | Obstacle durability | Destructible hills and trees | person | Preference answer, October 27 | Persistent craters, felled trees, and AI reacting to changed terrain |
+| Replay variation | Different hills and trees every game | person | Follow-up request, October 27 | Seeded per-match geometry; fixed physical cannon platforms |
+| Moving obstacles | Occasional passing birds | person | Follow-up request, October 27 | Both players and Pip can be blocked; bird flies away |
 | Aim | Relative rotation from initial resting pose | builder | Avoid absolute-facing confusion | Keep zero through blinks and pause |
 | Recipe | Aim Blast, adapted to deliberate turn-based fire | builder | Genre recipes | No automatic shots |
 | Publishing | Local preview and packaged webapp first | builder | Requested Studio workflow | No external publish or push requested |

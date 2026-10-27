@@ -179,14 +179,24 @@ test('native landscape setup starts two-player and solo matches, with deliberate
   fire(1); assert.equal(saved.match.shots[1], 1, 'new contact after a real lift did not rebind the native seat'); run(8);
   assert.equal(saved.match.turn, 0); assert.equal(saved.match.phase, 'aim');
 
+  // Help freezes match time. Reopening it from the menu must keep a path back to play.
+  assert.ok(menu); const beforeHelpClock=saved.match.elapsed;
+  menu('help'); run(4); menu('help'); run(2); tap(160,110); run(.8);
+  assert.match(aria, /\. aim\./, 'reopening help lost the return path to play');
+  assert.ok(saved.match.elapsed >= beforeHelpClock && saved.match.elapsed < beforeHelpClock+2, 'bird clock advanced while help was open');
+
   // Native menu pause clears contacts. Re-detection gets new ids and must not commit a shot.
   const beforePause = totalShots(), health = [...saved.match.health], terrain = structuredClone(saved.match.terrain);
   // The finger begins off Fire, then moves onto it without a new press. It is held when the menu opens.
   emit(finger(299, 1650, 800, BoardContactPhase.Began));
   emit(finger(299, 1650, 960, BoardContactPhase.Moved)); run(.1);
   assert.equal(totalShots(), beforePause);
-  for (const callback of pauses) callback(); run(4);
+  for (const callback of pauses) callback();
+  const pausedClock=saved.match.elapsed, pausedBirds=structuredClone(saved.match.birds);
+  run(4);
   assert.equal(totalShots(), beforePause);
+  assert.equal(saved.match.elapsed, pausedClock, 'birds kept flying during the native pause');
+  assert.deepEqual(saved.match.birds, pausedBirds, 'pause changed the bird crossing');
   for (const callback of resumes) callback();
   emit(piece(22, 0, 335, BoardContactPhase.Began), piece(1, 1, 180, BoardContactPhase.Began)); run(.15);
   emit(finger(300, 1650, 960, BoardContactPhase.Began)); run(.1);
@@ -200,6 +210,8 @@ test('native landscape setup starts two-player and solo matches, with deliberate
   assert.ok(menu); menu('restart'); run(.5);
   assert.deepEqual(saved.match.health, [3, 3]); assert.deepEqual(saved.match.shots, [0, 0]);
   assert.deepEqual(saved.match.terrain.craters, []); assert.deepEqual(saved.match.terrain.fallenTrees, []);
+  assert.notDeepEqual(saved.match.terrain.ridges, terrain.ridges, 'rematch reused the previous hills');
+  assert.notDeepEqual(saved.match.terrain.trees, terrain.trees, 'rematch reused the previous trees');
   assert.equal(saved.match.phase, 'aim'); fire(0, 302);
   assert.equal(saved.match.shots[0], 1, 'rematch lost the resting native cannon');
 
@@ -229,7 +241,7 @@ test('native landscape setup starts two-player and solo matches, with deliberate
   const checkpoint = JSON.parse(JSON.stringify(saved)) as NonNullable<typeof saved>;
   menu('setup'); tap(160, 110);
   assert.match(aria, /\. title\.$/);
-  loaded = checkpoint; assert.ok(restore); restore(); run(.1);
+  loaded = structuredClone(checkpoint); assert.ok(restore); restore(); run(.1);
   assert.ok(draws.includes('CONTINUE'), 'restored title did not offer Continue');
   emit(piece(1, 1, 180, BoardContactPhase.Ended)); run(1.3);
   emit(piece(41, 1, 180, BoardContactPhase.Began)); run(.4);
@@ -241,6 +253,8 @@ test('native landscape setup starts two-player and solo matches, with deliberate
   assert.deepEqual(saved.match.shots, checkpoint.match.shots, 'Continue reset shot counts');
   assert.deepEqual(saved.match.health, checkpoint.match.health, 'Continue reset tower health');
   assert.deepEqual(saved.match.terrain, checkpoint.match.terrain, 'Continue reset terrain damage');
+  assert.deepEqual(saved.match.birds, checkpoint.match.birds, 'Continue replaced the bird crossing');
+  assert.ok(saved.match.elapsed >= checkpoint.match.elapsed && saved.match.elapsed < checkpoint.match.elapsed + .2, 'Continue reset or jumped the bird clock');
   assert.deepEqual(saved.sides, checkpoint.sides, 'Continue rebound the right-side human to the wrong tower');
   assert.deepEqual(errors, []); assert.ok(aria.length > 0);
 });

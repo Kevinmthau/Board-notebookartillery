@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { advance, beginShot, collision, createMatch, groundY, makeProjectile, resolveImpact, stepBall, TREES, TUNE, type Projectile, type Side } from '../src/artillery';
-function trace(side: Side, wind: number, angle: number, power: number) {
+import { advance, baseGroundY, beginShot, birdPoses, collision, createMatch, groundY, makeProjectile, resolveImpact, stepBall, TREES, TUNE, type Projectile, type Side, type Terrain } from '../src/artillery';
+function trace(side: Side, wind: number, angle: number, power: number,terrain?:Terrain) {
   const ball=makeProjectile(side,angle,power);
   for(let tick=0;tick<1500;tick++) {
     stepBall(ball,wind,TUNE.step);
-    const impact=collision(ball);if(impact)return impact;
+    const impact=collision(ball,terrain);if(impact)return impact;
   }
   assert.fail('shot did not resolve');
 }
@@ -64,7 +64,7 @@ test('the smaller tower target does not keep the old invisible wide hit box', ()
   }
 });
 test('ground impacts carve lasting craters, undermine trees, and keep physical platforms intact', () => {
-  const match=createMatch(17),x=TREES[4].x,before=groundY(x);
+  const match=createMatch(17),x=match.terrain.trees[4].x,before=groundY(x,match.terrain);
   beginShot(match);resolveImpact(match,{x,y:before,kind:'ground',target:null});
   assert.equal(match.terrain.revision,1);
   assert.equal(groundY(x,match.terrain),before+TUNE.blastRadius);
@@ -76,17 +76,22 @@ test('ground impacts carve lasting craters, undermine trees, and keep physical p
   resolveImpact(match,{x:415,y:groundY(415,match.terrain),kind:'ground',target:null});
   assert.equal(groundY(395,match.terrain),groundY(395),'nearby blasts must not move the physical cannon platform');
   assert.equal(groundY(TUNE.towerX[0],match.terrain),groundY(TUNE.towerX[0]));
-  assert.deepEqual(createMatch(17).terrain,{craters:[],fallenTrees:[],revision:0},'a rematch starts with fresh scenery');
+  const fresh=createMatch(17).terrain;
+  assert.deepEqual(fresh.craters,[]);assert.deepEqual(fresh.fallenTrees,[]);assert.equal(fresh.revision,0);
+  assert.deepEqual(fresh.ridges,match.terrain.ridges,'explicit seed should preserve pristine layout while resetting damage');
 });
 test('a tree hit opens a lasting path for the next shot through its old canopy', () => {
-  const match=createMatch(2);match.wind=0;beginShot(match,20,70);
+  const match=createMatch(2);match.wind=0;
+  let angle=15,power=50;
+  search:for(const a of [15,20,25,30,35,40])for(const p of [50,60,70,80,90,100])if(trace(0,0,a,p,match.terrain).kind==='tree'){angle=a;power=p;break search;}
+  beginShot(match,angle,power);
   for(let frame=0;frame<800&&match.phase==='flight';frame++)advance(match,1/60);
   const first=match.impact!;
   assert.equal(first.kind,'tree');assert.ok(first.treeIndex!==undefined);
   assert.ok(match.terrain.fallenTrees.includes(first.treeIndex!));
   const oldCanopy:Projectile={x:first.x,y:first.y,vx:400,vy:0,age:1,trail:[]};
   assert.equal(collision(oldCanopy,match.terrain),null,'felled canopy should no longer block a shell');
-  advance(match,2);match.turn=0;match.wind=0;beginShot(match,20,70);
+  advance(match,2);match.turn=0;match.wind=0;beginShot(match,angle,power);
   for(let frame=0;frame<800&&match.phase==='flight';frame++)advance(match,1/60);
   assert.ok(match.impact!.x>first.x+10,'the next identical shot should reach farther');
   assert.notEqual(match.impact!.treeIndex,first.treeIndex);
@@ -97,7 +102,49 @@ test('long matches do not heal old craters or silently stop making new ones', ()
     const x=430+i*7;
     beginShot(match);resolveImpact(match,{x,y:groundY(x,match.terrain),kind:'ground',target:null});advance(match,2);
   }
-  assert.ok(groundY(430,match.terrain)>groundY(430));
-  assert.ok(groundY(1473,match.terrain)>groundY(1473));
+  assert.ok(groundY(430,match.terrain)>baseGroundY(430,match.terrain));
+  assert.ok(groundY(1473,match.terrain)>baseGroundY(1473,match.terrain));
   assert.equal(match.terrain.revision,150);
+});
+test('layouts are seeded, persistent, and new matches differ without moving the cannon pads', () => {
+  assert.deepEqual(createMatch(912),createMatch(912));
+  const first=createMatch(),second=createMatch();assert.notDeepEqual(first.terrain,second.terrain,'rapid rematches must not reuse the same seed');
+  const layouts=[1,2,3,4].map(seed=>createMatch(seed).terrain);
+  assert.equal(new Set(layouts.map(layout=>JSON.stringify(layout))).size,4);
+  for(const layout of layouts)for(const x of [80,240,395,1525,1680,1840])assert.equal(baseGroundY(x,layout),856);
+  const saved=JSON.parse(JSON.stringify(first));
+  assert.deepEqual(saved.terrain,first.terrain);
+  assert.deepEqual(birdPoses(saved),birdPoses(first));
+});
+test('random hills change previously winning routes while keeping both sides reachable', () => {
+  const outcomes=new Map<string,Set<string>>([['50/80',new Set()],['55/85',new Set()]]);
+  for(let seed=1;seed<=12;seed++) {
+    const terrain=createMatch(seed*7919).terrain;
+    for(const [angle,power] of [[50,80],[55,85]])outcomes.get(`${angle}/${power}`)!.add(trace(0,0,angle,power,terrain).kind);
+    for(const side of [0,1] as const)for(const wind of [-40,0,40]) {
+      let reachable=false;
+      for(let angle=40;angle<=65&&!reachable;angle+=5)for(let power=65;power<=100;power+=2)
+        if(trace(side,wind,angle,power,terrain).target===1-side){reachable=true;break;}
+      assert.ok(reachable,`layout${seed}/side${side}/wind${wind} must have a clean route`);
+    }
+  }
+  for(const [shot,kinds] of outcomes){assert.ok(kinds.has('hit'),`${shot} should work on some layouts`);assert.ok(kinds.has('tree')||kinds.has('ground'),`${shot} should be blocked on other layouts`);}
+});
+test('birds cross occasionally, move continuously, stay above trees, and survive a shell interception', () => {
+  const match=createMatch(44);
+  assert.deepEqual(birdPoses(match),[],'the sky starts clear');
+  match.elapsed=match.birds.startsAt+3;
+  const birds=birdPoses(match);assert.ok(birds.length>0);
+  const later=birdPoses(match,match.elapsed+.05);assert.equal(later[0].id,birds[0].id);
+  assert.ok(Math.abs(later[0].x-birds[0].x)<20&&later[0].x!==birds[0].x);
+  const crownTop=Math.min(...match.terrain.trees.flatMap(tree=>tree.crown.map(c=>c.y-c.ry)));
+  for(let tick=0;tick<600;tick++)for(const bird of birdPoses(match,tick*.1))assert.ok(bird.y+bird.ry<crownTop,'bird must not fly through the treetops');
+  beginShot(match);match.projectile={x:birds[0].x,y:birds[0].y,vx:0,vy:0,age:1,trail:[]};
+  const terrain=structuredClone(match.terrain);advance(match,TUNE.step);
+  assert.equal(match.impact?.kind,'bird');assert.equal(match.phase,'settle');assert.deepEqual(match.health,[3,3]);assert.deepEqual(match.terrain,terrain);
+  assert.ok(birdPoses(match).some(b=>b.id===birds[0].id&&b.fleeing),'bird should fly away unharmed');
+  assert.equal(collision({x:birds[0].x,y:birds[0].y,vx:0,vy:0,age:1,trail:[]},match.terrain,birdPoses(match)),null,'fleeing bird cannot block again');
+  const checkpoint=JSON.parse(JSON.stringify(match));assert.deepEqual(birdPoses(checkpoint),birdPoses(match));
+  match.elapsed=match.birds.startsAt+11;assert.deepEqual(birdPoses(match),[],'crossings need a clear gap');
+  match.elapsed=match.birds.startsAt+match.birds.interval+3;assert.ok(birdPoses(match).some(b=>!b.fleeing),'a later flock should cross');
 });
