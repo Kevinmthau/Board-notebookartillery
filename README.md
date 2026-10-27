@@ -2,9 +2,11 @@
 
 A first playable artillery duel for Board, built from the exact `board-games-ai` Studio starter.
 
+Source: [Kevinmthau/Board-notebookartillery](https://github.com/Kevinmthau/Board-notebookartillery).
+
 Use the physical Save the Bloogs Cannon pieces. There is no digital cannon during play. Turn to aim, set power, and tap Fire. Three direct hits topple the other tower. Two players share the screen, or choose Pip as a computer opponent.
 
-The wider battlefield has smaller towers, three hills, and ten destructible trees. Shots carve lasting craters and knock trees down, opening paths for later shots. Pale distant trees are scenery. Rematch restores the battlefield.
+The wider battlefield has smaller towers, freshly generated hills, and nine to thirteen destructible trees each match. Shots carve lasting craters and knock trees down, opening paths for later shots. Occasional passing birds can block a shot and fly away unharmed. Pale distant trees are scenery. Rematch generates a new valley; Continue preserves the saved layout and damage.
 
 ## Play in a browser
 

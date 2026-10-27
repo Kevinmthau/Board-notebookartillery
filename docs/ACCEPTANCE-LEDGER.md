@@ -127,3 +127,12 @@ The first playable does not include destructible ground, weapons, online multipl
 - **Build/deployment:** TypeScript, Vite, native packaging, browser packaging, ZIP integrity, and diff whitespace checks passed. Platform build `964d37376e7ca8bf`, with permanent appId/packageId preserved, installed and launched on KT’s Board.
 - **Hardware evidence:** `docs/screenshots/board-random-valley.png` shows native landscape setup over a randomized battlefield. Logs show platform state ready and the new bundle running. One `onPauseResult` TypeError occurred during replacement of the old running build, before the new bundle started; no new-bundle application exception appeared afterward. Existing optional font metadata/favicon warnings remain.
 - **Remaining human check:** Full hardware match, perceived bird frequency, and aiming difficulty on the new randomized terrain still need play feedback.
+
+## October 27, 2026 — public GitHub publication
+
+- **Request:** Commit and push the project to a public GitHub repository.
+- **Repository:** `https://github.com/Kevinmthau/Board-notebookartillery`; publication targets `main` and the existing `codex/bloog-barrage` development branch.
+- **Source evidence:** Reviewed all 132 reachable Git blobs across the seven existing commits and the vendored SDK archive for common credential/private-key patterns and unintended private data. No such findings; largest tracked file is about 391 KB. This is a targeted review, not a guarantee that every possible secret format is detected.
+- **Automated evidence:** `npm test`: 110 passed, 0 failed, 3 inherited catalog skips (113 total). `npm run build:web` passed TypeScript, Vite, native packaging, and standalone browser packaging. Platform build remains `964d37376e7ca8bf`.
+- **Publication contents:** Source, project records/screenshots, required SDK tarball, lockfile, and assets. Existing ignore rules exclude installed dependencies, generated build directories, and `.webapp.zip` packages. No asset licences changed.
+- **Browser, Board, and human evidence:** No new interactive or hardware playtest was performed for this publication. The earlier gameplay evidence and remaining full-match playtest item still apply.

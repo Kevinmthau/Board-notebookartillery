@@ -23,4 +23,5 @@
 - [x] Generate varied, reachable hills/trees for each new game, retaining exact layout on Continue.
 - [x] Add occasional moving birds with visible flight paths, collision feedback, and pause/save continuity.
 - [x] Verify randomized rematches and birds in the browser, then install the updated Board package.
+- [x] Prepare the requested public GitHub publication with a history review, passing tests, and successful Board/browser builds.
 - [ ] Complete a full hardware match and collect feedback on aiming feel, reach, and pacing.

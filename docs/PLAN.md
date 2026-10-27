@@ -126,7 +126,7 @@
 | Moving obstacles | Occasional passing birds | person | Follow-up request, October 27 | Both players and Pip can be blocked; bird flies away |
 | Aim | Relative rotation from initial resting pose | builder | Avoid absolute-facing confusion | Keep zero through blinks and pause |
 | Recipe | Aim Blast, adapted to deliberate turn-based fire | builder | Genre recipes | No automatic shots |
-| Publishing | Local preview and packaged webapp first | builder | Requested Studio workflow | No external publish or push requested |
+| Publishing | Public GitHub repository at `Kevinmthau/Board-notebookartillery` | person | Commit and push request, October 27 | Preserve existing history, vendored SDK, lockfile, and app identity; `main` is the public default branch |
 
 ## Build steps
 

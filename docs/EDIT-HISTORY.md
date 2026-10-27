@@ -37,3 +37,7 @@ User then chose “Destructible hills and trees.” Ground impacts now carve per
 User requested different hills and trees each game to make repeated shots less reliable, plus birds that sometimes get in the way. New matches generate seeded terrain geometry and tree placement/sizes; saved games retain their exact layout and destruction. Physical cannon platforms stay fixed. Occasional small groups of birds cross the battlefield, can block a shot from either player or Pip, and fly away after contact. Their timing is part of the saved match and pauses with play. Help and impact feedback explain the new obstacles.
 
 Also fixed reopening system-menu help while already in help, which previously overwrote its return destination and could trap the user in the help screen.
+
+## October 27, 2026 — public GitHub publication
+
+User requested: “commit and push to a public github directory.” Prepared publication of the existing project and its complete Git history at `https://github.com/Kevinmthau/Board-notebookartillery`, with `main` as the public default branch and `codex/bloog-barrage` retained for development. Updated the README to describe randomized valleys and passing birds. The vendored SDK, lockfile, assets, and permanent app identity remain intact; no asset licences changed.
